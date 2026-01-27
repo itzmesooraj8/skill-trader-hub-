@@ -1,0 +1,7 @@
+pandas
+numpy
+matplotlib
+# Install yfinance directly from GitHub for latest fixes
+git+https://github.com/ranaroussi/yfinance.git
+TA-Lib
+backtrader

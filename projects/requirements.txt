@@ -1,0 +1,22 @@
+# Core Data & Analysis
+# Use latest yfinance directly from GitHub for freshest fixes
+git+https://github.com/ranaroussi/yfinance.git
+pandas>=2.0.0
+numpy>=1.23.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Backtesting
+backtrader>=1.9.78
+
+# Technical Analysis (optional - requires manual install on Windows)
+# TA-Lib>=0.4.0
+
+# API & Web
+requests>=2.31.0
+beautifulsoup4>=4.11.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2023.0
