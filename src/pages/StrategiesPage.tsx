@@ -5,7 +5,7 @@ import { AppNavbar } from "@/components/layout/AppNavbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { CURATED_STRATEGIES } from "@/lib/mock-data";
+import { CURATED_STRATEGIES } from "@/lib/constants";
 import {
   TrendingUp,
   Copy,

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { LevelBadge } from "@/components/ui/level-badge";
-import { ASSESSMENT_QUESTIONS, calculateProskillLevel } from "@/lib/mock-data";
+import { ASSESSMENT_QUESTIONS, calculateProskillLevel } from "@/lib/constants";
 import { ArrowRight, ArrowLeft, CheckCircle2, Target, TrendingUp, Brain, Shield, Zap } from "lucide-react";
 
 export default function AssessmentPage() {

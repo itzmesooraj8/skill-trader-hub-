@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pandas
+numpy
+ccxt
+asyncpg
+python-dotenv
+psycopg2-binary

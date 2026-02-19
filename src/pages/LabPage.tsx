@@ -6,11 +6,11 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  SAMPLE_TICKERS,
-  generateMockNews,
-  runMockBacktest,
-} from "@/lib/mock-data";
+
+import { marketAPI, NewsItem, OHLCData } from "@/lib/api/market";
+import { tradingAPI } from "@/lib/api/trading";
+import { researchAPI, StrategyTemplate, Experiment } from "@/lib/api/research";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ComposedChart,
   Bar,
@@ -37,7 +37,19 @@ import {
   Zap,
   ExternalLink,
   ArrowLeft,
+  FlaskConical,
+  Trophy,
+  TrendingUp as TrendUp,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const SAMPLE_TICKERS = [
+  { symbol: "BTC/USDT", name: "Bitcoin" },
+  { symbol: "ETH/USDT", name: "Ethereum" },
+  { symbol: "SOL/USDT", name: "Solana" },
+  { symbol: "AAPL", name: "Apple Inc." },
+  { symbol: "SPY", name: "S&P 500 ETF" },
+];
 
 // Custom Candlestick shape for Recharts
 const CandlestickShape = (props: {
@@ -141,36 +153,90 @@ function StatPill({ label, value, variant = "default" }: {
 
 export default function LabPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedStrategy, setSelectedStrategy] = useState("ema-crossover");
   const [selectedTicker, setSelectedTicker] = useState("AAPL");
   const [params, setParams] = useState({
     fastEMA: 20,
     slowEMA: 50,
-    stopLoss: 2,
-    takeProfit: 4,
+    riskPerTrade: 2.0,
+    maxDrawdown: 20.0,
+    initialCapital: 10000,
   });
-  const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<ReturnType<typeof runMockBacktest> | null>(null);
+  const { mutate: runBacktest, isPending: isRunning } = useMutation({
+    mutationFn: (config: any) => tradingAPI.runBacktest(config),
+    onSuccess: (data) => {
+      setResult(data);
+    },
+    onError: (error) => {
+      console.error("Backtest failed:", error);
+      // Could add toast notification here
+    }
+  });
+
+  const [result, setResult] = useState<any | null>(null);
   const [newsOpen, setNewsOpen] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<"1D" | "1W" | "1M" | "1Y" | "5Y">("1Y");
+  const [activeTab, setActiveTab] = useState<"backtest" | "research">("backtest");
+  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<StrategyTemplate | null>(null);
 
-  const news = generateMockNews(selectedTicker);
+  const { data: news = [] } = useQuery({
+    queryKey: ['news', selectedTicker],
+    queryFn: () => marketAPI.getNews(selectedTicker),
+    enabled: !!selectedTicker,
+  });
+
+  const { data: realOHLC = [] } = useQuery({
+    queryKey: ['ohlc', selectedTicker, selectedTimeframe],
+    queryFn: () => marketAPI.getOHLCData(selectedTicker, selectedTimeframe),
+    enabled: !!selectedTicker,
+  });
+
+  // Research Lab queries
+  const { data: templates = [] } = useQuery({
+    queryKey: ['research-templates'],
+    queryFn: () => researchAPI.getTemplates(),
+  });
+
+  const { data: experiments = [] } = useQuery({
+    queryKey: ['experiments'],
+    queryFn: () => researchAPI.getExperiments(),
+  });
+
+  const { data: experimentRuns = [] } = useQuery({
+    queryKey: ['experiment-runs', selectedExperiment],
+    queryFn: () => researchAPI.getExperimentRuns(selectedExperiment!),
+    enabled: !!selectedExperiment,
+  });
+
+  const createExperimentMutation = useMutation({
+    mutationFn: (data: { name: string; strategy_type: string; description: string }) =>
+      researchAPI.createExperiment(data.name, data.strategy_type, data.description),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['experiments'] });
+    },
+  });
+
   const journalTags = ["FOMO", "Revenge Trade", "Fat Finger", "Followed Plan", "Overconfidence"];
 
   const handleRunBacktest = useCallback(() => {
-    setIsRunning(true);
-    setTimeout(() => {
-      const backtestResult = runMockBacktest({
-        strategy: selectedStrategy,
-        ticker: selectedTicker,
-        ...params,
-      });
-      setResult(backtestResult);
-      setIsRunning(false);
-    }, 2000);
-  }, [selectedStrategy, selectedTicker, params]);
+    runBacktest({
+      strategy: selectedStrategy,
+      ticker: selectedTicker,
+      fastEMA: params.fastEMA,
+      slowEMA: params.slowEMA,
+      stopLoss: 2, // Assuming backend uses this or default logic
+      takeProfit: 4, // Assuming backend uses this or default logic
+      initialCapital: params.initialCapital,
+      // Pass risk config if API supports it, currently hardcoded in trading.ts wrapper
+      // but ideally should be passed here:
+      // risk: { risk_per_trade: params.riskPerTrade / 100, max_drawdown: params.maxDrawdown / 100 }
+    });
+  }, [selectedStrategy, selectedTicker, params, runBacktest]);
 
   const getFilteredData = () => {
+    if (realOHLC.length > 0) return realOHLC;
     if (!result) return [];
     const days = { "1D": 1, "1W": 7, "1M": 30, "1Y": 365, "5Y": 1825 }[selectedTimeframe];
     return result.ohlcData.slice(-days);
@@ -192,18 +258,22 @@ export default function LabPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-display text-2xl font-bold">The Lab</h1>
-            <p className="text-sm text-muted-foreground">Backtest strategies before risking real capital</p>
+            <h1 className="font-display text-2xl font-bold">Quant Research Lab</h1>
+            <p className="text-sm text-muted-foreground">Professional backtesting & experiment tracking</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2" disabled>
-              <Save className="h-4 w-4" />
-              Save Strategy
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2" disabled>
-              <Share2 className="h-4 w-4" />
-              Share
-            </Button>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "backtest" | "research")} className="w-auto">
+              <TabsList className="glass">
+                <TabsTrigger value="backtest" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Backtest
+                </TabsTrigger>
+                <TabsTrigger value="research" className="gap-2">
+                  <FlaskConical className="h-4 w-4" />
+                  Research
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
@@ -239,19 +309,44 @@ export default function LabPage() {
               </Select>
             </Panel>
 
-            <Panel title="Parameters" icon={Settings2}>
+            <Panel title="Risk Management" icon={Settings2}>
               <div className="space-y-5">
                 {[
-                  { label: "Fast EMA", value: params.fastEMA, key: "fastEMA", min: 5, max: 50, step: 1 },
-                  { label: "Slow EMA", value: params.slowEMA, key: "slowEMA", min: 20, max: 200, step: 5 },
-                  { label: "Stop Loss", value: params.stopLoss, key: "stopLoss", min: 1, max: 10, step: 0.5, suffix: "%" },
-                  { label: "Take Profit", value: params.takeProfit, key: "takeProfit", min: 2, max: 20, step: 0.5, suffix: "%" },
+                  { label: "Risk Per Trade", value: params.riskPerTrade, key: "riskPerTrade", min: 0.1, max: 5, step: 0.1, suffix: "%" },
+                  { label: "Max Drawdown", value: params.maxDrawdown, key: "maxDrawdown", min: 5, max: 50, step: 1, suffix: "%" },
+                  { label: "Initial Capital", value: params.initialCapital, key: "initialCapital", min: 1000, max: 100000, step: 1000, suffix: "$" },
                 ].map((param) => (
                   <div key={param.key}>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-muted-foreground">{param.label}</span>
                       <span className="font-mono font-medium text-primary">
-                        {param.value}{param.suffix || ""}
+                        {param.suffix === "$" ? "$" : ""}{param.value}{param.suffix !== "$" ? param.suffix : ""}
+                      </span>
+                    </div>
+                    <Slider
+                      value={[param.value]}
+                      onValueChange={([v]) => setParams((p) => ({ ...p, [param.key]: v }))}
+                      min={param.min}
+                      max={param.max}
+                      step={param.step}
+                      className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:shadow-glow-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            <Panel title="Strategy Parameters" icon={Settings2}>
+              <div className="space-y-5">
+                {[
+                  { label: "Fast EMA", value: params.fastEMA, key: "fastEMA", min: 5, max: 50, step: 1 },
+                  { label: "Slow EMA", value: params.slowEMA, key: "slowEMA", min: 20, max: 200, step: 5 },
+                ].map((param) => (
+                  <div key={param.key}>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">{param.label}</span>
+                      <span className="font-mono font-medium text-primary">
+                        {param.value}
                       </span>
                     </div>
                     <Slider
@@ -349,7 +444,7 @@ export default function LabPage() {
                       />
                       <Bar
                         dataKey="high"
-                        shape={<CandlestickShape />}
+                        shape={(props: any) => <CandlestickShape {...props} />}
                         isAnimationActive={false}
                       />
                       {result.signals.slice(0, 10).map((signal, i) => (
@@ -376,29 +471,45 @@ export default function LabPage() {
 
             {/* Results Stats */}
             {result && (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <StatPill
-                  label="Win Rate"
-                  value={`${result.results.winRate}%`}
-                  variant={result.results.winRate >= 50 ? "profit" : "loss"}
-                />
-                <StatPill
-                  label="Return"
-                  value={`${result.results.totalReturn >= 0 ? "+" : ""}${result.results.totalReturn}%`}
+                  label="Net Profit"
+                  value={`${result.results.totalReturn >= 0 ? "+" : ""}${result.results.totalReturn.toFixed(2)}%`}
                   variant={result.results.totalReturn >= 0 ? "profit" : "loss"}
                 />
                 <StatPill
-                  label="Drawdown"
-                  value={`-${result.results.maxDrawdown}%`}
+                  label="Win Rate"
+                  value={`${result.results.winRate.toFixed(1)}%`}
+                  variant={result.results.winRate >= 50 ? "profit" : "loss"}
+                />
+                <StatPill
+                  label="Profit Factor"
+                  value={result.results.profitFactor.toFixed(2)}
+                  variant={result.results.profitFactor >= 1.5 ? "profit" : "default"}
+                />
+                <StatPill
+                  label="Max Drawdown"
+                  value={`-${result.results.maxDrawdown.toFixed(2)}%`}
                   variant="loss"
                 />
                 <StatPill
-                  label="Sharpe"
-                  value={result.results.sharpeRatio}
+                  label="Sharpe Ratio"
+                  value={result.results.sharpeRatio.toFixed(2)}
+                  variant={result.results.sharpeRatio > 1 ? "profit" : "default"}
                 />
                 <StatPill
-                  label="Trades"
-                  value={result.results.numTrades}
+                  label="Sortino"
+                  value={result.results.sortinoRatio?.toFixed(2) || "-"}
+                />
+                <StatPill
+                  label="Avg Win"
+                  value={`$${result.results.avgWin.toFixed(2)}`}
+                  variant="profit"
+                />
+                <StatPill
+                  label="Avg Loss"
+                  value={`-$${Math.abs(result.results.avgLoss).toFixed(2)}`}
+                  variant="loss"
                 />
               </div>
             )}
@@ -497,6 +608,166 @@ export default function LabPage() {
             </Panel>
           </div>
         </div>
+
+        {/* RESEARCH TAB */}
+        {activeTab === "research" && (
+          <div className="space-y-6">
+            {/* Strategy Templates Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-display text-xl font-bold">Strategy Templates</h2>
+                  <p className="text-sm text-muted-foreground">Professional playbooks (Momentum, Mean-Reversion, Seasonality)</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                {templates.map((template) => (
+                  <button
+                    key={template.template_id}
+                    onClick={() => setSelectedTemplate(template)}
+                    className={`glass-interactive p-6 text-left transition-all ${selectedTemplate?.template_id === template.template_id
+                      ? 'ring-2 ring-primary shadow-glow'
+                      : ''
+                      }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-display font-semibold text-lg mb-1">{template.name}</h3>
+                        <Badge variant="secondary" className="text-2xs">
+                          {template.category}
+                        </Badge>
+                      </div>
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FlaskConical className="h-5 w-5 text-primary" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {template.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(template.default_params).slice(0, 3).map(([key, value]) => (
+                        <div key={key} className="text-2xs px-2 py-1 rounded bg-card-elevated border border-border/30">
+                          <span className="text-muted-foreground">{key}:</span>{' '}
+                          <span className="font-mono text-primary">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Experiments Grid */}
+            <div className="grid lg:grid-cols-12 gap-6">
+              {/* Left: Experiments List */}
+              <div className="lg:col-span-4 space-y-4">
+                <Panel title="Experiments" icon={Trophy}>
+                  <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
+                    {experiments.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FlaskConical className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-sm">No experiments yet</p>
+                        <p className="text-xs mt-1">Backend ready - create your first experiment</p>
+                      </div>
+                    ) : (
+                      experiments.map((exp) => (
+                        <button
+                          key={exp.experiment_id}
+                          onClick={() => setSelectedExperiment(exp.experiment_id)}
+                          className={`w-full text-left p-3 rounded-lg transition-all ${selectedExperiment === exp.experiment_id
+                            ? 'bg-primary/10 border border-primary/20'
+                            : 'bg-card-elevated hover:bg-card-hover border border-border/30'
+                            }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-medium text-sm">{exp.name}</h4>
+                            <Badge variant="outline" className="text-2xs">
+                              {exp.run_count || 0} runs
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{exp.description}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-2xs">
+                              {exp.strategy_type}
+                            </Badge>
+                            <span className="text-2xs text-muted-foreground">
+                              {new Date(exp.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </Panel>
+              </div>
+
+              {/* Right: Runs & Metrics */}
+              <div className="lg:col-span-8">
+                {selectedExperiment ? (
+                  <Panel title="Experiment Runs" icon={TrendUp}>
+                    {experimentRuns.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                        <p className="text-sm font-medium mb-1">No runs recorded yet</p>
+                        <p className="text-xs">Run backtests to log performance</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="overflow-x-auto">
+                          <table className="data-table w-full">
+                            <thead>
+                              <tr>
+                                <th className="text-left">Run</th>
+                                <th>Symbol</th>
+                                <th>Sharpe</th>
+                                <th>Sortino</th>
+                                <th>MaxDD</th>
+                                <th>Hit%</th>
+                                <th>Return</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {experimentRuns.map((run) => (
+                                <tr key={run.run_id}>
+                                  <td className="font-medium">{run.run_name}</td>
+                                  <td className="font-mono text-sm">{run.symbol}</td>
+                                  <td className={run.metrics.sharpe_ratio && run.metrics.sharpe_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
+                                    {run.metrics.sharpe_ratio?.toFixed(2) || '-'}
+                                  </td>
+                                  <td className={run.metrics.sortino_ratio && run.metrics.sortino_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
+                                    {run.metrics.sortino_ratio?.toFixed(2) || '-'}
+                                  </td>
+                                  <td className="text-loss">
+                                    {run.metrics.max_drawdown ? `-${run.metrics.max_drawdown}%` : '-'}
+                                  </td>
+                                  <td className={run.metrics.hit_rate && run.metrics.hit_rate > 50 ? 'text-profit' : 'text-warning'}>
+                                    {run.metrics.hit_rate ? `${run.metrics.hit_rate}%` : '-'}
+                                  </td>
+                                  <td className={run.metrics.total_return && run.metrics.total_return > 0 ? 'text-profit' : 'text-loss'}>
+                                    {run.metrics.total_return ? `${run.metrics.total_return > 0 ? '+' : ''}${run.metrics.total_return}%` : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </Panel>
+                ) : (
+                  <div className="glass h-full flex items-center justify-center py-24">
+                    <div className="text-center text-muted-foreground">
+                      <FlaskConical className="h-20 w-20 mx-auto mb-4 opacity-10" />
+                      <p className="font-medium mb-1">Select an experiment</p>
+                      <p className="text-sm">View runs and compare metrics</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

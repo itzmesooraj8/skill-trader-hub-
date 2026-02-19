@@ -1,44 +1,109 @@
+import { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import LandingPage from "./pages/LandingPage";
-import AuthPage from "./pages/AuthPage";
-import AssessmentPage from "./pages/AssessmentPage";
-import DashboardPage from "./pages/DashboardPage";
-import LabPage from "./pages/LabPage";
-import ScannerPage from "./pages/ScannerPage";
-import StrategiesPage from "./pages/StrategiesPage";
-import ExtensionPage from "./pages/ExtensionPage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+// Lazy load pages for code splitting
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const AssessmentPage = lazy(() => import("./pages/AssessmentPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const LabPage = lazy(() => import("./pages/LabPage"));
+const ScannerPage = lazy(() => import("./pages/ScannerPage"));
+const StrategiesPage = lazy(() => import("./pages/StrategiesPage"));
+const ExtensionPage = lazy(() => import("./pages/ExtensionPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/assessment" element={<AssessmentPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/lab" element={<LabPage />} />
-            <Route path="/scanner" element={<ScannerPage />} />
-            <Route path="/strategies" element={<StrategiesPage />} />
-            <Route path="/extension" element={<ExtensionPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
+    <ErrorBoundary>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<LoadingScreen />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+
+                <Route path="/auth" element={
+                  <PublicRoute>
+                    <AuthPage />
+                  </PublicRoute>
+                } />
+
+                <Route path="/assessment" element={
+                  <ProtectedRoute>
+                    <AssessmentPage />
+                  </ProtectedRoute>
+                } />
+
+                {/* Protected Dashboard Routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/lab" element={
+                  <ProtectedRoute>
+                    <LabPage />
+                  </ProtectedRoute>
+                } />
+
+                {/* Level-Gated Routes */}
+                <Route path="/scanner" element={
+                  <ProtectedRoute minLevel={3}>
+                    <ScannerPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/strategies" element={
+                  <ProtectedRoute>
+                    <StrategiesPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/extension" element={
+                  <ProtectedRoute>
+                    <ExtensionPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } />
+
+
+
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
+    </ErrorBoundary>
   </QueryClientProvider>
 );
 

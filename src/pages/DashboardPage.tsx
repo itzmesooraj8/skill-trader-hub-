@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppNavbar } from "@/components/layout/AppNavbar";
 import { Button } from "@/components/ui/button";
 import { LevelBadge, LockedFeature } from "@/components/ui/level-badge";
-import {
-  generateEquityCurve,
-  generateTradeHistory,
-  generateBehavioralAnalytics,
-} from "@/lib/mock-data";
+
+import { tradingAPI } from "@/lib/api/trading";
+import { marketAPI } from "@/lib/api/market";
+import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
   Line,
@@ -135,26 +134,39 @@ function DashboardCard({
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [equityData, setEquityData] = useState<ReturnType<typeof generateEquityCurve>>([]);
-  const [trades, setTrades] = useState<ReturnType<typeof generateTradeHistory>>([]);
-  const [behavioralData, setBehavioralData] = useState<ReturnType<typeof generateBehavioralAnalytics>>([]);
+  const { data: equityData = [] } = useQuery({
+    queryKey: ['equity-curve'],
+    queryFn: () => tradingAPI.getEquityCurve(),
+  });
+
+  const { data: trades = [] } = useQuery({
+    queryKey: ['trades'],
+    queryFn: () => tradingAPI.getTrades({ limit: 50 }),
+  });
+
+  const { data: behavioralData = [] } = useQuery({
+    queryKey: ['behavioral-analytics'],
+    queryFn: () => tradingAPI.getBehavioralAnalytics(),
+  });
+
+  const { data: marketOverview } = useQuery({
+    queryKey: ['market-overview'],
+    queryFn: () => marketAPI.getMarketOverview(),
+    refetchInterval: 60000,
+  });
+
   const [timeframe, setTimeframe] = useState<"1M" | "3M" | "6M" | "1Y">("3M");
 
-  useEffect(() => {
-    const days = { "1M": 30, "3M": 90, "6M": 180, "1Y": 365 }[timeframe];
-    setEquityData(generateEquityCurve(days, user?.capital || 10000));
-    const tradeHistory = generateTradeHistory(50);
-    setTrades(tradeHistory);
-    setBehavioralData(generateBehavioralAnalytics(tradeHistory));
-  }, [timeframe, user?.capital]);
-
   // Calculate stats from data
-  const currentEquity = equityData[equityData.length - 1]?.equity || user?.capital || 10000;
-  const startEquity = equityData[0]?.equity || user?.capital || 10000;
-  const totalReturn = ((currentEquity - startEquity) / startEquity) * 100;
-  const maxDrawdown = Math.max(...equityData.map(d => d.drawdown));
-  const winningTrades = trades.filter(t => t.isProfit).length;
-  const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
+  const { currentEquity, startEquity, totalReturn, maxDrawdown, winningTrades, winRate } = useMemo(() => {
+    const currentEquity = equityData[equityData.length - 1]?.equity || user?.capital || 10000;
+    const startEquity = equityData[0]?.equity || user?.capital || 10000;
+    const totalReturn = ((currentEquity - startEquity) / startEquity) * 100;
+    const maxDrawdown = equityData.length > 0 ? Math.max(...equityData.map(d => d.drawdown)) : 0;
+    const winningTrades = trades.filter(t => t.isProfit).length;
+    const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
+    return { currentEquity, startEquity, totalReturn, maxDrawdown, winningTrades, winRate };
+  }, [equityData, trades, user]);
 
   // Mock activity feed
   const activityFeed = [
@@ -321,9 +333,6 @@ export default function DashboardPage() {
             title="Live Feed"
             subtitle="Extension alerts & signals"
             className="lg:col-span-4"
-            action={
-              <span className="px-2 py-1 rounded-md bg-muted/50 text-2xs text-muted-foreground">Mock Data</span>
-            }
           >
             <div className="space-y-3">
               {activityFeed.map((item, i) => (

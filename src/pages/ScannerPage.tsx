@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { LockedFeature, LevelBadge } from "@/components/ui/level-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { generateScannerResults } from "@/lib/mock-data";
+
+import { marketAPI } from "@/lib/api/market";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   TrendingUp,
@@ -68,7 +70,11 @@ export default function ScannerPage() {
   const [sortField, setSortField] = useState<"symbol" | "price" | "change" | "volume" | "rvol">("change");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  const results = generateScannerResults(filters);
+  const { data: results = [] } = useQuery({
+    queryKey: ['scanner'],
+    queryFn: () => marketAPI.getScanner(),
+    refetchInterval: 30000,
+  });
 
   const filteredResults = results.filter((stock) =>
     stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||

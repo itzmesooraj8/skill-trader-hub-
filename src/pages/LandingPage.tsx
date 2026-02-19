@@ -3,7 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowRight, Play, TrendingUp, TrendingDown, BarChart3, Zap, Activity, ChevronDown, Minus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { SAMPLE_TICKERS, runMockBacktest } from "@/lib/mock-data";
+import { SAMPLE_TICKERS } from "@/lib/constants";
+
+// Internal demo generator for landing page visualization
+function runDemoBacktest(params: any) {
+  return {
+    params,
+    results: {
+      winRate: Number((45 + Math.random() * 25).toFixed(1)),
+      totalReturn: Number((-20 + Math.random() * 80).toFixed(2)),
+      maxDrawdown: Number((5 + Math.random() * 20).toFixed(2)),
+      sharpeRatio: Number((-0.5 + Math.random() * 2.5).toFixed(2)),
+      numTrades: Math.floor(50 + Math.random() * 150),
+      profitFactor: Number((1 + Math.random()).toFixed(2)),
+    }
+  };
+}
 
 // Animated number counter
 function CountUp({ end, duration = 2000, prefix = "", suffix = "" }: {
@@ -166,7 +181,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, login } = useAuth();
   const [selectedTicker, setSelectedTicker] = useState("AAPL");
-  const [backtestResult, setBacktestResult] = useState<ReturnType<typeof runMockBacktest> | null>(null);
+  const [backtestResult, setBacktestResult] = useState<ReturnType<typeof runDemoBacktest> | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
@@ -208,7 +223,7 @@ export default function LandingPage() {
   const handleDemoBacktest = () => {
     setIsRunning(true);
     setTimeout(() => {
-      const result = runMockBacktest({
+      const result = runDemoBacktest({
         strategy: "EMA Crossover",
         ticker: selectedTicker,
         fastEMA: 20,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface User {
   id: string;
@@ -37,15 +37,29 @@ const defaultUser: User = {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    // Initialize state from localStorage
+    const savedUser = localStorage.getItem('demo_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  // Persist user to localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('demo_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('demo_user');
+    }
+  }, [user]);
 
   const login = (email: string) => {
     // Mock login - in production this would hit an auth endpoint
-    setUser({
+    const newUser = {
       ...defaultUser,
       email,
       name: email.split("@")[0],
-    });
+    };
+    setUser(newUser);
   };
 
   const logout = () => {

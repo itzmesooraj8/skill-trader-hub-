@@ -1,3 +1,6 @@
+/* Import fonts first - must be before @tailwind directives */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,8 +9,6 @@
    Bloomberg Terminal + TradingView Pro + Modern Glassmorphism
    All colors MUST be HSL.
 */
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
@@ -164,6 +165,7 @@
 }
 
 @layer components {
+
   /* Premium glass cards with noise texture */
   .glass {
     @apply relative overflow-hidden;
@@ -216,27 +218,35 @@
 
   /* Premium animated aurora */
   @keyframes aurora-flow {
-    0%, 100% {
+
+    0%,
+    100% {
       background-position: 0% 50%;
       opacity: 0.7;
     }
+
     25% {
       opacity: 0.85;
     }
+
     50% {
       background-position: 100% 50%;
       opacity: 0.7;
     }
+
     75% {
       opacity: 0.85;
     }
   }
 
   @keyframes aurora-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: scale(1);
       filter: blur(60px);
     }
+
     50% {
       transform: scale(1.05);
       filter: blur(80px);
@@ -244,28 +254,24 @@
   }
 
   .aurora-bg {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--aurora-cyan)) 0%,
-      hsl(var(--aurora-teal)) 20%,
-      hsl(var(--aurora-green)) 40%,
-      hsl(var(--aurora-blue)) 60%,
-      hsl(var(--aurora-teal)) 80%,
-      hsl(var(--aurora-cyan)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--aurora-cyan)) 0%,
+        hsl(var(--aurora-teal)) 20%,
+        hsl(var(--aurora-green)) 40%,
+        hsl(var(--aurora-blue)) 60%,
+        hsl(var(--aurora-teal)) 80%,
+        hsl(var(--aurora-cyan)) 100%);
     background-size: 400% 400%;
     animation: aurora-flow 20s ease infinite;
   }
 
   .aurora-bg-bearish {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--aurora-red)) 0%,
-      hsl(var(--aurora-orange)) 25%,
-      hsl(var(--aurora-pink)) 50%,
-      hsl(var(--aurora-orange)) 75%,
-      hsl(var(--aurora-red)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--aurora-red)) 0%,
+        hsl(var(--aurora-orange)) 25%,
+        hsl(var(--aurora-pink)) 50%,
+        hsl(var(--aurora-orange)) 75%,
+        hsl(var(--aurora-red)) 100%);
     background-size: 400% 400%;
     animation: aurora-flow 20s ease infinite;
   }
@@ -280,7 +286,7 @@
     content: '';
     position: absolute;
     inset: -50%;
-    background: 
+    background:
       radial-gradient(ellipse 80% 50% at 20% 20%, hsl(var(--aurora-cyan) / 0.25) 0%, transparent 50%),
       radial-gradient(ellipse 60% 40% at 80% 10%, hsl(var(--aurora-blue) / 0.2) 0%, transparent 50%),
       radial-gradient(ellipse 70% 50% at 10% 60%, hsl(var(--aurora-green) / 0.15) 0%, transparent 50%),
@@ -291,7 +297,7 @@
   }
 
   .mesh-gradient-bearish::before {
-    background: 
+    background:
       radial-gradient(ellipse 80% 50% at 20% 20%, hsl(var(--aurora-red) / 0.25) 0%, transparent 50%),
       radial-gradient(ellipse 60% 40% at 80% 10%, hsl(var(--aurora-orange) / 0.2) 0%, transparent 50%),
       radial-gradient(ellipse 70% 50% at 10% 60%, hsl(var(--aurora-pink) / 0.15) 0%, transparent 50%),
@@ -301,7 +307,7 @@
 
   /* Grid lines overlay for terminal feel */
   .grid-overlay {
-    background-image: 
+    background-image:
       linear-gradient(hsl(var(--chart-grid)) 1px, transparent 1px),
       linear-gradient(90deg, hsl(var(--chart-grid)) 1px, transparent 1px);
     background-size: 40px 40px;
@@ -393,20 +399,20 @@
 
   /* Premium glow effects */
   .glow-primary {
-    box-shadow: 
+    box-shadow:
       0 0 20px hsl(var(--primary) / 0.25),
       0 0 40px hsl(var(--primary) / 0.15),
       0 0 60px hsl(var(--primary) / 0.1);
   }
 
   .glow-profit {
-    box-shadow: 
+    box-shadow:
       0 0 15px hsl(var(--profit) / 0.3),
       0 0 30px hsl(var(--profit) / 0.15);
   }
 
   .glow-loss {
-    box-shadow: 
+    box-shadow:
       0 0 15px hsl(var(--loss) / 0.3),
       0 0 30px hsl(var(--loss) / 0.15);
   }
@@ -447,18 +453,17 @@
     0% {
       background-position: -200% 0;
     }
+
     100% {
       background-position: 200% 0;
     }
   }
 
   .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 25%,
-      hsl(var(--muted-foreground) / 0.08) 50%,
-      hsl(var(--muted)) 75%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 25%,
+        hsl(var(--muted-foreground) / 0.08) 50%,
+        hsl(var(--muted)) 75%);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
@@ -511,7 +516,7 @@
   /* Premium button variants */
   .btn-glow {
     @apply relative overflow-hidden;
-    box-shadow: 
+    box-shadow:
       0 0 20px hsl(var(--primary) / 0.3),
       inset 0 1px 0 hsl(0 0% 100% / 0.1);
   }
@@ -526,8 +531,16 @@
 
   /* Terminal cursor blink */
   @keyframes cursor-blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+
+    0%,
+    50% {
+      opacity: 1;
+    }
+
+    51%,
+    100% {
+      opacity: 0;
+    }
   }
 
   .terminal-cursor {
@@ -536,13 +549,27 @@
 
   /* Price ticker animations */
   @keyframes ticker-up {
-    0% { transform: translateY(100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   @keyframes ticker-down {
-    0% { transform: translateY(-100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   .ticker-up {
@@ -561,12 +588,13 @@
 }
 
 @layer utilities {
+
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -595,6 +623,7 @@
       opacity: 0;
       transform: translateY(30px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -602,8 +631,13 @@
   }
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes scale-up {
@@ -611,6 +645,7 @@
       opacity: 0;
       transform: scale(0.95);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -630,17 +665,34 @@
   }
 
   /* Stagger children animations */
-  .stagger-children > * {
+  .stagger-children>* {
     opacity: 0;
     animation: fade-up 0.5s ease-out forwards;
   }
 
-  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
-  .stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
-  .stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
-  .stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
-  .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
-  .stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
+  .stagger-children>*:nth-child(1) {
+    animation-delay: 0.1s;
+  }
+
+  .stagger-children>*:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .stagger-children>*:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .stagger-children>*:nth-child(4) {
+    animation-delay: 0.4s;
+  }
+
+  .stagger-children>*:nth-child(5) {
+    animation-delay: 0.5s;
+  }
+
+  .stagger-children>*:nth-child(6) {
+    animation-delay: 0.6s;
+  }
 
   /* Backdrop blur utilities */
   .backdrop-blur-premium {
