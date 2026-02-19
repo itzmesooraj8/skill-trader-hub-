@@ -1,4 +1,4 @@
-# Skill Trader Hub - Python Backend
+# Stratix - Python Backend
 
 This backend executes the core "Quant Engine" logic, including data ingestion, storage, and backtesting.
 
@@ -31,12 +31,12 @@ pip install -r requirements.txt
 ```
 
 ### 3. Database Configuration
-Ensure PostgreSQL is running. Create a database named `skilltrader`.
+Ensure PostgreSQL is running. Create a database named `stratix`.
 Update `.env` file (create one if not exists) with your credentials:
 ```env
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=yourpassword
-POSTGRES_DB=skilltrader
+POSTGRES_DB=stratix
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 ```

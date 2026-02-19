@@ -34,7 +34,7 @@ export default function AuthPage() {
             } else {
                 login(email);
                 toast.success("Account created!", {
-                    description: "Welcome to Skill Trader Hub.",
+                    description: "Welcome to Stratix.",
                 });
                 navigate("/dashboard");
             }
@@ -67,7 +67,7 @@ export default function AuthPage() {
                     {/* Header */}
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white mb-6 shadow-glow">
-                            <span className="font-display font-black text-black text-lg">ST</span>
+                            <span className="font-display font-black text-black text-lg">SX</span>
                         </div>
                         <h1 className="font-display text-3xl font-bold text-white mb-2">
                             {isLogin ? "Welcome Back" : "Create Account"}
@@ -153,7 +153,7 @@ export default function AuthPage() {
                             onClick={() => setIsLogin(!isLogin)}
                             className="text-sm text-white/40 hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto"
                         >
-                            {isLogin ? "New to Skill Trader Hub?" : "Already have an account?"}
+                            {isLogin ? "New to Stratix?" : "Already have an account?"}
                             <span className="underline decoration-white/30 hover:decoration-white underline-offset-4">
                                 {isLogin ? "Start Free" : "Sign In"}
                             </span>

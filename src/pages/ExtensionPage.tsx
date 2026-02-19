@@ -24,7 +24,7 @@ export default function ExtensionPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showComingSoon, setShowComingSoon] = useState(false);
-  const [apiKey] = useState("st_demo_xxxx_xxxx_xxxx_xxxx");
+  const [apiKey] = useState("sx_demo_xxxx_xxxx_xxxx_xxxx");
   const [copied, setCopied] = useState(false);
 
   const handleCopyKey = () => {
@@ -58,7 +58,7 @@ export default function ExtensionPage() {
             </div>
             <h1 className="text-3xl font-bold mb-4">Browser Extension</h1>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Connect the Skill Trader Hub browser extension to receive real-time alerts,
+              Connect the Stratix browser extension to receive real-time alerts,
               auto-execute strategies, and sync your trades across platforms.
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function ExtensionPage() {
                   <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/30">
                     <Chrome className="h-8 w-8 text-muted-foreground" />
                     <div className="flex-1">
-                      <p className="font-medium">Skill Trader Hub for Chrome</p>
+                      <p className="font-medium">Stratix for Chrome</p>
                       <p className="text-sm text-muted-foreground">Version 1.0.0</p>
                     </div>
                     <Button onClick={handleInstallClick}>
@@ -136,7 +136,7 @@ export default function ExtensionPage() {
                 </GlassCardHeader>
                 <GlassCardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Use this key to authenticate the extension with your Skill Trader Hub account.
+                    Use this key to authenticate the extension with your Stratix account.
                   </p>
                   <div className="flex gap-2">
                     <Input
@@ -220,7 +220,7 @@ export default function ExtensionPage() {
           <DialogHeader>
             <DialogTitle>Coming Soon!</DialogTitle>
             <DialogDescription>
-              The Skill Trader Hub browser extension is currently in development.
+              The Stratix browser extension is currently in development.
               We're building something amazing!
             </DialogDescription>
           </DialogHeader>

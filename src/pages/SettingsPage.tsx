@@ -139,7 +139,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-display text-xl font-semibold">{user?.name || "Demo Trader"}</h3>
-                  <p className="text-muted-foreground">{user?.email || "demo@skilltraderhub.io"}</p>
+                  <p className="text-muted-foreground">{user?.email || "demo@stratix.io"}</p>
                   <div className="flex items-center gap-3 mt-3">
                     <LevelBadge level={user?.level || 3} />
                     <Badge variant="secondary" className="capitalize">{user?.tier || "free"} Plan</Badge>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
           {/* Disclaimer */}
           <div className="text-center p-4 rounded-xl bg-muted/30 border border-border/30">
             <p className="text-xs text-muted-foreground">
-              <strong>Disclaimer:</strong> Skill Trader Hub is an educational platform for skill development.
+              <strong>Disclaimer:</strong> Stratix is an educational platform for skill development.
               The "Funded Trader Challenge" is a simulation that may lead to funding consideration.
               This is not an employment offer or investment opportunity.
             </p>

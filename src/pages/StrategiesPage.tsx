@@ -26,7 +26,7 @@ function StrategyCard({
   onClone,
   onViewDetails
 }: {
-  strategy: typeof CURATED_STRATEGIES[0];
+  strategy: any;
   isCloned: boolean;
   onClone: () => void;
   onViewDetails: () => void;
@@ -97,10 +97,10 @@ function StrategyCard({
       {/* Creator */}
       <div className="flex items-center gap-3 mb-6 p-3 rounded-lg bg-card-elevated/50 border border-border/30">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-          <span className="text-sm font-bold text-primary">ST</span>
+          <span className="text-sm font-bold text-primary">SX</span>
         </div>
         <div>
-          <p className="text-sm font-medium">Skill Trader Hub Team</p>
+          <p className="text-sm font-medium">Stratix Team</p>
           <p className="text-2xs text-muted-foreground">Official Strategy</p>
         </div>
       </div>
@@ -137,28 +137,41 @@ function StrategyCard({
   );
 }
 
+import { researchAPI, StrategyTemplate } from "@/lib/api/research";
+import { useQuery } from "@tanstack/react-query";
+
+// ... (StrategyCard component remains same)
+
 export default function StrategiesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [selectedStrategy, setSelectedStrategy] = useState<typeof CURATED_STRATEGIES[0] | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<any>(null); // Use loose type or import proper type
   const [showDetails, setShowDetails] = useState(false);
   const [clonedStrategies, setClonedStrategies] = useState<string[]>([]);
+
+  const { data: strategies = [], isLoading } = useQuery({
+    queryKey: ['strategies'],
+    queryFn: () => researchAPI.getTemplates(),
+  });
 
   const handleClone = (strategyId: string) => {
     setClonedStrategies((prev) => [...prev, strategyId]);
   };
 
-  const handleViewDetails = (strategy: typeof CURATED_STRATEGIES[0]) => {
+
+  const handleViewDetails = (strategy: any) => {
     setSelectedStrategy(strategy);
     setShowDetails(true);
   };
 
-  const handleUseInLab = (strategy: typeof CURATED_STRATEGIES[0]) => {
+  const handleUseInLab = (strategy: any) => {
+    // Backend params might differ or be missing
+    const p = strategy.params || {};
     const params = new URLSearchParams({
-      fastEMA: strategy.params.fastEMA.toString(),
-      slowEMA: strategy.params.slowEMA.toString(),
-      stopLoss: strategy.params.stopLoss.toString(),
-      takeProfit: strategy.params.takeProfit.toString(),
+      fastEMA: String(p.fastEMA || p.fast_period || 20),
+      slowEMA: String(p.slowEMA || p.slow_period || 50),
+      stopLoss: String(p.stopLoss || 2.0),
+      takeProfit: String(p.takeProfit || 4.0),
     });
     navigate(`/lab?${params.toString()}`);
   };
@@ -195,7 +208,7 @@ export default function StrategiesPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold mb-1">Skill Trader Hub Strategies</h1>
+            <h1 className="font-display text-2xl font-bold mb-1">Stratix Strategies</h1>
             <p className="text-muted-foreground">
               Battle-tested strategies built by our team. Clone and customize in The Lab.
             </p>
@@ -208,7 +221,9 @@ export default function StrategiesPage() {
 
         {/* Strategy Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CURATED_STRATEGIES.map((strategy) => (
+          {isLoading ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground">Loading strategies...</div>
+          ) : strategies.map((strategy: any) => (
             <StrategyCard
               key={strategy.id}
               strategy={strategy}

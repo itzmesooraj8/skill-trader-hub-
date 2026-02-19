@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const defaultUser: User = {
   id: "demo-user-1",
-  email: "demo@skilltraderhub.io",
+  email: "demo@stratix.io",
   name: "Demo Trader",
   level: 3,
   xp: 450,

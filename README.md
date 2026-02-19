@@ -1,11 +1,11 @@
-# Skill Trader Hub
+# Stratix
 
 ![Project Status](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## 📌 Project Overview
 
-**Skill Trader Hub** is a cutting-edge web application designed to empower professionals to trade skills, network, and grow their careers. Built with performance, scalability, and user experience at its core, this platform leverages modern web technologies to deliver a seamless and engaging interface.
+**Stratix** is a cutting-edge web application designed to empower professionals to trade skills, network, and grow their careers. Built with performance, scalability, and user experience at its core, this platform leverages modern web technologies to deliver a seamless and engaging interface.
 
 ## 🛠 Tech Stack
 
@@ -44,8 +44,8 @@ Ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/skill-trader-hub.git
-   cd skill-trader-hub
+   git clone https://github.com/yourusername/stratix.git
+   cd stratix
    ```
 
 2. **Install Dependencies**
@@ -72,7 +72,7 @@ Ensure you have the following installed:
 ## 📂 Project Structure
 
 ```
-skill-trader-hub/
+stratix/
 ├── src/
 │   ├── components/      # Reusable UI components
 │   ├── hooks/           # Custom React hooks

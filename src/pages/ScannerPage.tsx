@@ -64,7 +64,7 @@ export default function ScannerPage() {
   const [filters, setFilters] = useState<FilterState>({
     sector: "",
     minPrice: 0,
-    maxPrice: 1000,
+    maxPrice: 200000,
     minMarketCap: 0,
   });
   const [sortField, setSortField] = useState<"symbol" | "price" | "change" | "volume" | "rvol">("change");
@@ -76,10 +76,17 @@ export default function ScannerPage() {
     refetchInterval: 30000,
   });
 
-  const filteredResults = results.filter((stock) =>
-    stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    stock.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredResults = results.filter((stock) => {
+    const matchesSearch = stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      stock.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSector = !filters.sector || filters.sector === "all" || stock.sector === filters.sector;
+    const matchesPrice = stock.price >= filters.minPrice && stock.price <= filters.maxPrice;
+    // Market cap filter (input in Billions, data in raw units? Assuming raw. 0 if unknown)
+    // If backend returns 0, we might want to show it regardless unless strict
+    const matchesCap = !filters.minMarketCap || (stock.marketCap || 0) >= filters.minMarketCap * 1e9;
+
+    return matchesSearch && matchesSector && matchesPrice && matchesCap;
+  });
 
   const sortedResults = [...filteredResults].sort((a, b) => {
     const aVal = a[sortField];
@@ -185,7 +192,7 @@ export default function ScannerPage() {
                       <SelectValue placeholder="All Sectors" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Sectors</SelectItem>
+                      <SelectItem value="all">All Sectors</SelectItem>
                       <SelectItem value="Technology">Technology</SelectItem>
                       <SelectItem value="Financial">Financial</SelectItem>
                       <SelectItem value="Consumer Cyclical">Consumer Cyclical</SelectItem>
@@ -196,14 +203,14 @@ export default function ScannerPage() {
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-muted-foreground">Price Range</span>
-                    <span className="font-mono text-primary">${filters.minPrice} - ${filters.maxPrice}</span>
+                    <span className="font-mono text-primary">${filters.minPrice.toLocaleString()} - ${filters.maxPrice.toLocaleString()}</span>
                   </div>
                   <Slider
                     value={[filters.minPrice, filters.maxPrice]}
                     onValueChange={([min, max]) => setFilters((f) => ({ ...f, minPrice: min, maxPrice: max }))}
                     min={0}
-                    max={1000}
-                    step={10}
+                    max={200000}
+                    step={100}
                     className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary"
                   />
                 </div>

@@ -17,6 +17,7 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const LabPage = lazy(() => import("./pages/LabPage"));
 const ScannerPage = lazy(() => import("./pages/ScannerPage"));
 const StrategiesPage = lazy(() => import("./pages/StrategiesPage"));
+const AnalysisPage = lazy(() => import("./pages/AnalysisPage"));
 const ExtensionPage = lazy(() => import("./pages/ExtensionPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
@@ -79,6 +80,12 @@ const App = () => (
                 <Route path="/strategies" element={
                   <ProtectedRoute>
                     <StrategiesPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/analysis" element={
+                  <ProtectedRoute>
+                    <AnalysisPage />
                   </ProtectedRoute>
                 } />
 

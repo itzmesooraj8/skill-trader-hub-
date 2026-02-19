@@ -245,7 +245,7 @@ export default function LandingPage() {
   };
 
   const handleExploreDashboard = () => {
-    login("demo@skilltraderhub.io");
+    login("demo@stratix.io");
     navigate("/dashboard");
   };
 
@@ -275,9 +275,9 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center">
-                <span className="font-display font-black text-black text-sm">ST</span>
+                <span className="font-display font-black text-black text-sm">SX</span>
               </div>
-              <span className="font-display font-bold text-xl tracking-tight text-white">Skill Trader Hub</span>
+              <span className="font-display font-bold text-xl tracking-tight text-white">Stratix</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -556,9 +556,9 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center">
-                <span className="font-display font-black text-black text-xs">ST</span>
+                <span className="font-display font-black text-black text-xs">SX</span>
               </div>
-              <span className="text-white/40 text-sm">© 2026 Skill Trader Hub</span>
+              <span className="text-white/40 text-sm">© 2026 Stratix</span>
             </div>
             <p className="text-xs text-white/20 max-w-xs text-right">
               Educational platform for skill development. Not investment advice.

@@ -10,8 +10,8 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=skilltrader
-      - DATABASE_URL=postgresql://postgres:password@db:5432/skilltrader
+      - POSTGRES_DB=stratix
+      - DATABASE_URL=postgresql://postgres:password@db:5432/stratix
     depends_on:
       - db
     volumes:
@@ -33,7 +33,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=skilltrader
+      - POSTGRES_DB=stratix
     ports:
       - "5432:5432"
     volumes:

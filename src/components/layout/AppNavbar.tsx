@@ -20,6 +20,7 @@ import { useState } from "react";
 const navItems = [
   { path: "/dashboard", label: "Cockpit", icon: LayoutDashboard },
   { path: "/lab", label: "The Lab", icon: FlaskConical },
+  { path: "/analysis", label: "Institutional", icon: ScanSearch },
   { path: "/scanner", label: "Scanner", icon: ScanSearch, minLevel: 3 },
   { path: "/strategies", label: "Strategies", icon: Layers },
   { path: "/extension", label: "Extension", icon: Puzzle },
@@ -39,9 +40,9 @@ export function AppNavbar() {
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-3 group">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-sm group-hover:shadow-glow transition-shadow">
-              <span className="font-display font-bold text-primary-foreground text-sm">ST</span>
+              <span className="font-display font-bold text-primary-foreground text-sm">SX</span>
             </div>
-            <span className="font-display font-bold text-lg tracking-tight hidden sm:block">Skill Trader Hub</span>
+            <span className="font-display font-bold text-lg tracking-tight hidden sm:block">Stratix</span>
           </Link>
 
           {/* Desktop Navigation */}

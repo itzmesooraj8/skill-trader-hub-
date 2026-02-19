@@ -147,6 +147,9 @@ export const marketAPI = {
     }>> {
         return await apiFetch('/market/scanner');
     },
+    async getInstitutionalAnalysis(symbol: string): Promise<any> {
+        return await apiFetch(`/analysis/${symbol.replace('/', '-')}`);
+    },
 };
 
 /**

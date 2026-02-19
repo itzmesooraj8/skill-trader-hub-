@@ -6,3 +6,5 @@ ccxt
 asyncpg
 python-dotenv
 psycopg2-binary
+yfinance
+scipy

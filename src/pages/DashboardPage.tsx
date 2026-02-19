@@ -144,10 +144,12 @@ export default function DashboardPage() {
     queryFn: () => tradingAPI.getTrades({ limit: 50 }),
   });
 
-  const { data: behavioralData = [] } = useQuery({
+  const { data: rawBehavioralData } = useQuery({
     queryKey: ['behavioral-analytics'],
     queryFn: () => tradingAPI.getBehavioralAnalytics(),
   });
+
+  const behavioralData = Array.isArray(rawBehavioralData) ? rawBehavioralData : [];
 
   const { data: marketOverview } = useQuery({
     queryKey: ['market-overview'],
@@ -158,23 +160,32 @@ export default function DashboardPage() {
   const [timeframe, setTimeframe] = useState<"1M" | "3M" | "6M" | "1Y">("3M");
 
   // Calculate stats from data
+
   const { currentEquity, startEquity, totalReturn, maxDrawdown, winningTrades, winRate } = useMemo(() => {
-    const currentEquity = equityData[equityData.length - 1]?.equity || user?.capital || 10000;
-    const startEquity = equityData[0]?.equity || user?.capital || 10000;
-    const totalReturn = ((currentEquity - startEquity) / startEquity) * 100;
-    const maxDrawdown = equityData.length > 0 ? Math.max(...equityData.map(d => d.drawdown)) : 0;
-    const winningTrades = trades.filter(t => t.isProfit).length;
-    const winRate = trades.length > 0 ? (winningTrades / trades.length) * 100 : 0;
+    // Safe access with defaults
+    const safeEquityData = equityData || [];
+    const safeTrades = trades || [];
+
+    const currentEquity = safeEquityData[safeEquityData.length - 1]?.equity || user?.capital || 10000;
+    const startEquity = safeEquityData[0]?.equity || user?.capital || 10000;
+    const totalReturn = startEquity > 0 ? ((currentEquity - startEquity) / startEquity) * 100 : 0;
+    const maxDrawdown = safeEquityData.length > 0 ? Math.max(...safeEquityData.map(d => d.drawdown || 0)) : 0;
+    const winningTrades = safeTrades.filter(t => t.isProfit).length;
+    const winRate = safeTrades.length > 0 ? (winningTrades / safeTrades.length) * 100 : 0;
     return { currentEquity, startEquity, totalReturn, maxDrawdown, winningTrades, winRate };
   }, [equityData, trades, user]);
 
-  // Mock activity feed
-  const activityFeed = [
-    { type: "alert", message: "RSI Overbought detected on TSLA", time: "2m ago", icon: AlertTriangle, severity: "warning" },
-    { type: "trade", message: "EMA Crossover signal on AAPL", time: "15m ago", icon: TrendingUp, severity: "success" },
-    { type: "alert", message: "NVDA approaching resistance", time: "1h ago", icon: Bell, severity: "info" },
-    { type: "trade", message: "Stop loss triggered on GOOGL", time: "3h ago", icon: TrendingDown, severity: "error" },
-  ];
+  // Real activity feed from trades
+  const activityFeed = useMemo(() => {
+    if (!trades || !trades.length) return [];
+    return trades.slice(0, 5).map(trade => ({
+      type: "trade",
+      message: `${trade.side.toUpperCase()} ${trade.symbol} @ ${trade.entryPrice}`,
+      time: new Date(trade.entryDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      icon: trade.pnl > 0 ? TrendingUp : TrendingDown,
+      severity: trade.pnl > 0 ? "success" : trade.pnl < 0 ? "error" : "info"
+    }));
+  }, [trades]);
 
   const timeframeOptions = ["1M", "3M", "6M", "1Y"] as const;
 
@@ -335,28 +346,35 @@ export default function DashboardPage() {
             className="lg:col-span-4"
           >
             <div className="space-y-3">
-              {activityFeed.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-card-elevated/50 hover:bg-card-hover transition-colors cursor-pointer group"
-                >
-                  <div className={`p-2 rounded-lg ${item.severity === "warning" ? "bg-warning/10 text-warning" :
-                    item.severity === "success" ? "bg-profit/10 text-profit" :
-                      item.severity === "error" ? "bg-loss/10 text-loss" :
-                        "bg-primary/10 text-primary"
-                    }`}>
-                    <item.icon className="h-4 w-4" />
+              {activityFeed.length > 0 ? (
+                activityFeed.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-card-elevated/50 hover:bg-card-hover transition-colors cursor-pointer group"
+                  >
+                    <div className={`p-2 rounded-lg ${item.severity === "warning" ? "bg-warning/10 text-warning" :
+                      item.severity === "success" ? "bg-profit/10 text-profit" :
+                        item.severity === "error" ? "bg-loss/10 text-loss" :
+                          "bg-primary/10 text-primary"
+                      }`}>
+                      <item.icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-snug group-hover:text-foreground transition-colors">{item.message}</p>
+                      <p className="text-2xs text-muted-foreground mt-1">{item.time}</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm leading-snug group-hover:text-foreground transition-colors">{item.message}</p>
-                    <p className="text-2xs text-muted-foreground mt-1">{item.time}</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No recent activity</p>
+                  <p className="text-xs">Trades will appear here</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-4 pt-4 border-t border-border/50 text-center">
-              <p className="text-xs text-muted-foreground">Connect browser extension for live alerts</p>
+              <p className="text-xs text-muted-foreground">Real-time trade feed</p>
             </div>
           </DashboardCard>
 
@@ -366,7 +384,7 @@ export default function DashboardPage() {
             subtitle="Trading pattern insights"
             className="lg:col-span-4"
           >
-            {behavioralData.length > 0 ? (
+            {Array.isArray(behavioralData) && behavioralData.length > 0 ? (
               <div className="space-y-4">
                 <div className="h-44">
                   <ResponsiveContainer width="100%" height="100%">

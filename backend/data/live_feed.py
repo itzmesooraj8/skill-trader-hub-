@@ -30,7 +30,20 @@ class LiveDataManager:
 
     async def start(self):
         self.running = True
-        exchange = ccxt.binance()
+        exchange = ccxt.binance({
+            'enableRateLimit': True,
+            'options': {
+                'defaultType': 'spot',
+                'adjustForTimeDifference': True
+            },
+            # User suggested using api1-api4 for performance
+            'urls': {
+                 'api': {
+                     'public': 'https://api1.binance.com', 
+                     'private': 'https://api1.binance.com',
+                 }
+            }
+        })
         try:
             await exchange.load_markets()
         except Exception as e:

@@ -28,6 +28,7 @@ export interface BacktestResults {
 export interface Trade {
     id: string;
     symbol: string;
+    side: 'buy' | 'sell';
     entryDate: string;
     exitDate: string;
     entryPrice: number;
@@ -59,24 +60,10 @@ export interface BehavioralTag {
 
 /**
  * Trading & Backtesting API Service
- * 
- * TODO: Replace mock trading functions with real backend
- * 
- * Backend Requirements:
- * - POST /api/trading/backtest - Run backtest
- * - GET /api/trading/trades - Get user's trade history
- * - POST /api/trading/trades - Add new trade
- * - PUT /api/trading/trades/:id - Update trade
- * - DELETE /api/trading/trades/:id - Delete trade
- * - GET /api/trading/equity-curve - Get equity curve data
- * - GET /api/trading/analytics - Get trading analytics
  */
 export const tradingAPI = {
     /**
      * Run backtest with given parameters
-     * Replaces: runMockBacktest() from mock-data.ts
-     * 
-     * @param params - Backtest parameters
      */
     async runBacktest(params: BacktestParams): Promise<{
         params: BacktestParams;
@@ -96,18 +83,15 @@ export const tradingAPI = {
         }>;
         tradeHistory: Trade[];
     }> {
-        // Backend expects { name, symbol, params, risk }
-        // We map frontend params to backend structure
         const backendPayload = {
             name: params.strategy || 'SMA_Cross',
             symbol: params.ticker || 'BTC/USDT',
             params: {
                 fast_period: params.fastEMA || 50,
                 slow_period: params.slowEMA || 200,
-                // Add other params mapping here
             },
             risk: {
-                risk_per_trade: 0.02, // Default or add to frontend UI
+                risk_per_trade: 0.02,
                 max_drawdown: 0.20
             }
         };
@@ -116,10 +100,6 @@ export const tradingAPI = {
             method: 'POST',
             body: JSON.stringify(backendPayload),
         });
-
-        // Map backend response to frontend interface
-        // Backend returns: { equity_curve, dates, sharpe_ratio, ... }
-        // Frontend expects: { params, results, ohlcData, signals, tradeHistory }
 
         return {
             params,
@@ -135,15 +115,16 @@ export const tradingAPI = {
                 largestWin: response.metrics.largest_win,
                 largestLoss: response.metrics.largest_loss
             },
-            ohlcData: [], // Backend doesn't return OHLC + Signals separately yet, need to fetch market data or update backend
+            ohlcData: [], // Backend doesn't return OHLC + Signals separately yet
             signals: [],
             tradeHistory: response.trades ? response.trades.map((t: any) => ({
                 id: `trade-${t.date}`,
                 symbol: params.ticker,
+                side: t.side || t.type || 'buy',
                 entryDate: t.date,
-                exitDate: t.date, // Approx
+                exitDate: t.date,
                 entryPrice: t.price,
-                exitPrice: t.price, // Needs clarification in backend logs
+                exitPrice: t.price,
                 pnl: t.pnl || 0,
                 pnlPercent: 0,
                 isProfit: (t.pnl || 0) > 0,
@@ -154,9 +135,6 @@ export const tradingAPI = {
 
     /**
      * Get user's trade history
-     * Replaces: generateTradeHistory() from mock-data.ts
-     * 
-     * @param filters - Optional filters
      */
     async getTrades(filters?: {
         symbol?: string;
@@ -164,12 +142,12 @@ export const tradingAPI = {
         endDate?: string;
         limit?: number;
     }): Promise<Trade[]> {
-        // Backend currently only returns all session trades, ignore filters for MVP
         const trades: any[] = await apiFetch('/trades');
 
         return trades.map(t => ({
             id: t.id,
             symbol: t.symbol,
+            side: t.side || t.type || 'buy',
             entryDate: t.time || new Date().toISOString(),
             exitDate: t.time || new Date().toISOString(),
             entryPrice: t.entry_price || 0,
@@ -183,9 +161,7 @@ export const tradingAPI = {
     },
 
     /**
-     * Add a new trade to the journal
-     * 
-     * @param trade - Trade data
+     * Add a new trade
      */
     async addTrade(trade: Omit<Trade, 'id'>): Promise<Trade> {
         return await apiFetch<Trade>('/trading/trades', {
@@ -196,9 +172,6 @@ export const tradingAPI = {
 
     /**
      * Update an existing trade
-     * 
-     * @param id - Trade ID
-     * @param updates - Fields to update
      */
     async updateTrade(id: string, updates: Partial<Trade>): Promise<Trade> {
         return await apiFetch<Trade>(`/trading/trades/${id}`, {
@@ -209,8 +182,6 @@ export const tradingAPI = {
 
     /**
      * Delete a trade
-     * 
-     * @param id - Trade ID
      */
     async deleteTrade(id: string): Promise<void> {
         await apiFetch(`/trading/trades/${id}`, {
@@ -220,10 +191,6 @@ export const tradingAPI = {
 
     /**
      * Get equity curve data
-     * Replaces: generateEquityCurve() from mock-data.ts
-     * 
-     * @param startDate - Optional start date
-     * @param endDate - Optional end date
      */
     async getEquityCurve(startDate?: string, endDate?: string): Promise<EquityCurvePoint[]> {
         const params = new URLSearchParams();
@@ -231,11 +198,12 @@ export const tradingAPI = {
         if (endDate) params.append('endDate', endDate);
 
         const query = params.toString();
+        // Remove spaces that might have been introduced by auto-formatters in previous steps
         return await apiFetch<EquityCurvePoint[]>(`/trading/equity-curve${query ? `?${query}` : ''}`);
     },
 
     /**
-     * Get trading analytics and statistics
+     * Get trading analytics
      */
     async getAnalytics(): Promise<{
         totalTrades: number;
@@ -257,14 +225,13 @@ export const tradingAPI = {
 
     /**
      * Get behavioral analytics
-     * Replaces: generateBehavioralAnalytics() from mock-data.ts
      */
     async getBehavioralAnalytics(): Promise<BehavioralTag[]> {
         return await apiFetch('/trading/behavioral-analytics');
     },
 
     /**
-     * Export trades to CSV
+     * Export trades
      */
     async exportTrades(format: 'csv' | 'json' = 'csv'): Promise<Blob> {
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/trading/export?format=${format}`, {
@@ -280,45 +247,3 @@ export const tradingAPI = {
         return await response.blob();
     },
 };
-
-/**
- * MIGRATION GUIDE: Replacing Mock Trading Data
- * 
- * 1. In DashboardPage.tsx, replace:
- * 
- * const equityCurve = useMemo(() => generateEquityCurve(180, user?.capital || 10000), [user]);
- * const trades = useMemo(() => generateTradeHistory(50), []);
- * 
- * With:
- * 
- * const { data: equityCurve } = useQuery({
- *   queryKey: ['equity-curve'],
- *   queryFn: () => tradingAPI.getEquityCurve(),
- * });
- * 
- * const { data: trades } = useQuery({
- *   queryKey: ['trades'],
- *   queryFn: () => tradingAPI.getTrades({ limit: 50 }),
- * });
- * 
- * 2. In LabPage.tsx, replace:
- * 
- * const result = runMockBacktest(params);
- * 
- * With:
- * 
- * const { mutate: runBacktest, data: result, isLoading } = useMutation({
- *   mutationFn: (params: BacktestParams) => tradingAPI.runBacktest(params),
- * });
- * 
- * 3. For adding trades:
- * 
- * const { mutate: addTrade } = useMutation({
- *   mutationFn: tradingAPI.addTrade,
- *   onSuccess: () => {
- *     queryClient.invalidateQueries({ queryKey: ['trades'] });
- *     queryClient.invalidateQueries({ queryKey: ['equity-curve'] });
- *     queryClient.invalidateQueries({ queryKey: ['analytics'] });
- *   },
- * });
- */
