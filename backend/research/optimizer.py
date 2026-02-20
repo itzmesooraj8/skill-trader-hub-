@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Tuple
 import pandas as pd
 import numpy as np
-from ..engine import Backtester
+from engine import Backtester
 import logging
 
 logger = logging.getLogger(__name__)

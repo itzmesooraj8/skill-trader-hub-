@@ -1,11 +1,16 @@
 import { apiFetch } from './index';
 
 export interface StrategyTemplate {
-    template_id: string;
+    id: string;
     name: string;
-    category: string;
+    assetClass: string;
     description: string;
-    default_params: Record<string, any>;
+    params: Record<string, any>;
+    risk: string;
+    winRate: number;
+    returnRate: number;
+    maxDrawdown: number;
+    whyItWorks: string;
 }
 
 export interface Experiment {

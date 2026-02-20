@@ -2,8 +2,8 @@ from typing import Dict, Any, List
 import pandas as pd
 from datetime import timedelta
 import logging
-from ..engine import Backtester
-from .optimizer import GridSearchOptimizer
+from engine import Backtester
+from research.optimizer import GridSearchOptimizer
 
 logger = logging.getLogger(__name__)
 

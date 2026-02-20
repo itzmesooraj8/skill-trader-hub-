@@ -20,6 +20,8 @@ const StrategiesPage = lazy(() => import("./pages/StrategiesPage"));
 const AnalysisPage = lazy(() => import("./pages/AnalysisPage"));
 const ExtensionPage = lazy(() => import("./pages/ExtensionPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const MarketsPage = lazy(() => import("./pages/MarketsPage"));
+const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -98,6 +100,18 @@ const App = () => (
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <SettingsPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/markets" element={
+                  <ProtectedRoute>
+                    <MarketsPage />
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/history" element={
+                  <ProtectedRoute>
+                    <HistoryPage />
                   </ProtectedRoute>
                 } />
 

@@ -45,6 +45,8 @@ function SettingsPanel({
   );
 }
 
+import { PageLayout } from "@/components/layout/PageLayout";
+
 export default function SettingsPage() {
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
@@ -103,130 +105,121 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/3" />
-        <div className="grid-overlay opacity-15" />
-      </div>
+    <PageLayout>
+      <div className="max-w-4xl mx-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
+          onClick={() => navigate("/dashboard")}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">Manage your account and preferences</p>
+        </div>
 
-      <AppNavbar />
-
-      <main className="relative container mx-auto px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-            onClick={() => navigate("/dashboard")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <div className="mb-8">
-            <h1 className="font-display text-2xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your account and preferences</p>
-          </div>
-
-          <div className="grid gap-6">
-            {/* Profile Section */}
-            <SettingsPanel title="Profile" icon={User}>
-              <div className="flex items-center gap-6">
-                <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-glow-sm">
-                  <span className="text-3xl font-bold text-primary">
-                    {user?.name?.charAt(0).toUpperCase() || "D"}
-                  </span>
+        <div className="grid gap-6">
+          {/* Profile Section */}
+          <SettingsPanel title="Profile" icon={User}>
+            <div className="flex items-center gap-6">
+              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shadow-glow-sm">
+                <span className="text-3xl font-bold text-primary">
+                  {user?.name?.charAt(0).toUpperCase() || "D"}
+                </span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-xl font-semibold">{user?.name || "Demo Trader"}</h3>
+                <p className="text-muted-foreground">{user?.email || "demo@stratix.io"}</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <LevelBadge level={user?.level || 3} />
+                  <Badge variant="secondary" className="capitalize">{user?.tier || "free"} Plan</Badge>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-display text-xl font-semibold">{user?.name || "Demo Trader"}</h3>
-                  <p className="text-muted-foreground">{user?.email || "demo@stratix.io"}</p>
-                  <div className="flex items-center gap-3 mt-3">
-                    <LevelBadge level={user?.level || 3} />
-                    <Badge variant="secondary" className="capitalize">{user?.tier || "free"} Plan</Badge>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-border/50">
+              <LevelProgress
+                currentLevel={user?.level || 3}
+                currentXP={user?.xp || 450}
+                xpToNextLevel={user?.xpToNextLevel || 1000}
+              />
+            </div>
+          </SettingsPanel>
+
+          {/* Trading Settings */}
+          <SettingsPanel title="Trading Settings" icon={Settings2}>
+            <div>
+              <label className="text-sm font-medium mb-3 block">Trading Capital</label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    value={capital}
+                    onChange={(e) => setCapital(e.target.value)}
+                    className="pl-8 font-mono bg-card-elevated border-border/50"
+                  />
+                </div>
+                <Button onClick={handleCapitalUpdate}>Update</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Used for position sizing calculations and dashboard stats
+              </p>
+            </div>
+          </SettingsPanel>
+
+          {/* Notifications */}
+          <SettingsPanel title="Notifications" icon={Bell}>
+            <div className="space-y-1">
+              {[
+                { title: "Email Notifications", desc: "Weekly performance reports", defaultChecked: true },
+                { title: "Strategy Alerts", desc: "Get notified when signals trigger", defaultChecked: false },
+                { title: "New Features", desc: "Updates and new feature announcements", defaultChecked: true },
+              ].map((item) => (
+                <div key={item.title} className="flex items-center justify-between py-4 border-b border-border/30 last:border-0">
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-sm text-muted-foreground">{item.desc}</p>
                   </div>
+                  <Switch defaultChecked={item.defaultChecked} />
                 </div>
-              </div>
+              ))}
+            </div>
+          </SettingsPanel>
 
-              <div className="mt-6 pt-6 border-t border-border/50">
-                <LevelProgress
-                  currentLevel={user?.level || 3}
-                  currentXP={user?.xp || 450}
-                  xpToNextLevel={user?.xpToNextLevel || 1000}
-                />
-              </div>
-            </SettingsPanel>
-
-            {/* Trading Settings */}
-            <SettingsPanel title="Trading Settings" icon={Settings2}>
+          {/* Subscription */}
+          <SettingsPanel title="Subscription" icon={CreditCard}>
+            <div className="flex items-center justify-between p-5 rounded-xl bg-card-elevated border border-border/30">
               <div>
-                <label className="text-sm font-medium mb-3 block">Trading Capital</label>
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      value={capital}
-                      onChange={(e) => setCapital(e.target.value)}
-                      className="pl-8 font-mono bg-card-elevated border-border/50"
-                    />
-                  </div>
-                  <Button onClick={handleCapitalUpdate}>Update</Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Used for position sizing calculations and dashboard stats
+                <p className="font-display font-semibold capitalize">{user?.tier || "free"} Plan</p>
+                <p className="text-sm text-muted-foreground">
+                  {user?.tier === "free" ? "Upgrade to unlock all features" : "Active subscription"}
                 </p>
               </div>
-            </SettingsPanel>
-
-            {/* Notifications */}
-            <SettingsPanel title="Notifications" icon={Bell}>
-              <div className="space-y-1">
-                {[
-                  { title: "Email Notifications", desc: "Weekly performance reports", defaultChecked: true },
-                  { title: "Strategy Alerts", desc: "Get notified when signals trigger", defaultChecked: false },
-                  { title: "New Features", desc: "Updates and new feature announcements", defaultChecked: true },
-                ].map((item) => (
-                  <div key={item.title} className="flex items-center justify-between py-4 border-b border-border/30 last:border-0">
-                    <div>
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">{item.desc}</p>
-                    </div>
-                    <Switch defaultChecked={item.defaultChecked} />
-                  </div>
-                ))}
-              </div>
-            </SettingsPanel>
-
-            {/* Subscription */}
-            <SettingsPanel title="Subscription" icon={CreditCard}>
-              <div className="flex items-center justify-between p-5 rounded-xl bg-card-elevated border border-border/30">
-                <div>
-                  <p className="font-display font-semibold capitalize">{user?.tier || "free"} Plan</p>
-                  <p className="text-sm text-muted-foreground">
-                    {user?.tier === "free" ? "Upgrade to unlock all features" : "Active subscription"}
-                  </p>
-                </div>
-                <Button onClick={() => setShowPricing(true)}>
-                  {user?.tier === "free" ? "Upgrade" : "Manage"}
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </SettingsPanel>
-
-            {/* Danger Zone */}
-            <SettingsPanel title="Danger Zone" icon={Shield} danger>
-              <Button
-                variant="outline"
-                className="text-loss border-loss/30 hover:bg-loss/10 hover:border-loss/50"
-                onClick={logout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+              <Button onClick={() => setShowPricing(true)}>
+                {user?.tier === "free" ? "Upgrade" : "Manage"}
+                <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
-            </SettingsPanel>
-          </div>
+            </div>
+          </SettingsPanel>
+
+          {/* Danger Zone */}
+          <SettingsPanel title="Danger Zone" icon={Shield} danger>
+            <Button
+              variant="outline"
+              className="text-loss border-loss/30 hover:bg-loss/10 hover:border-loss/50"
+              onClick={logout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
+          </SettingsPanel>
         </div>
-      </main>
+      </div>
+
 
       {/* Pricing Dialog */}
       <Dialog open={showPricing} onOpenChange={setShowPricing}>
@@ -316,6 +309,6 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

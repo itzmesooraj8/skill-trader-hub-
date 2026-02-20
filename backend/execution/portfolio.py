@@ -83,7 +83,9 @@ class PortfolioManager:
             'exit_price': exit_price,
             'pnl': pnl,
             'reason': reason,
-            'time': datetime.utcnow().isoformat()
+            'entry_time': pos.entry_time.isoformat(),
+            'exit_time': datetime.utcnow().isoformat(),
+            'time': datetime.utcnow().isoformat() # Keep for backward compatibility
         }
         self.trade_history.append(record)
         

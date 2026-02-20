@@ -5,7 +5,6 @@ import { AppNavbar } from "@/components/layout/AppNavbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { CURATED_STRATEGIES } from "@/lib/constants";
 import {
   TrendingUp,
   Copy,
@@ -142,6 +141,8 @@ import { useQuery } from "@tanstack/react-query";
 
 // ... (StrategyCard component remains same)
 
+import { PageLayout } from "@/components/layout/PageLayout";
+
 export default function StrategiesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -186,67 +187,49 @@ export default function StrategiesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Subtle background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/3" />
-        <div className="grid-overlay opacity-15" />
+    <PageLayout>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold mb-1">Stratix Strategies</h1>
+          <p className="text-muted-foreground">
+            Battle-tested strategies built by our team. Clone and customize in The Lab.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-sm text-primary font-medium">User submissions coming in v2.0</span>
+        </div>
       </div>
 
-      <AppNavbar />
+      {/* Strategy Grid */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          <div className="col-span-full py-12 text-center text-muted-foreground">Loading strategies...</div>
+        ) : strategies.map((strategy: any) => (
+          <StrategyCard
+            key={strategy.id}
+            strategy={strategy}
+            isCloned={clonedStrategies.includes(strategy.id)}
+            onClone={() => handleClone(strategy.id)}
+            onViewDetails={() => handleViewDetails(strategy)}
+          />
+        ))}
+      </div>
 
-      <main className="relative container mx-auto px-6 py-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold mb-1">Stratix Strategies</h1>
-            <p className="text-muted-foreground">
-              Battle-tested strategies built by our team. Clone and customize in The Lab.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm text-primary font-medium">User submissions coming in v2.0</span>
-          </div>
+      {/* Submit Strategy Coming Soon */}
+      <div className="mt-12 glass-elevated p-10 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 mb-6">
+          <Sparkles className="h-8 w-8 text-primary" />
         </div>
+        <h2 className="font-display text-2xl font-bold mb-3">Submit Your Strategy</h2>
+        <p className="text-muted-foreground max-w-md mx-auto mb-6">
+          Reach Level 9 to submit your own strategies for community review.
+          Top strategies get featured and you earn rewards.
+        </p>
+        <Badge variant="secondary" className="text-sm px-4 py-1">Coming in v2.0</Badge>
+      </div>
 
-        {/* Strategy Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isLoading ? (
-            <div className="col-span-full py-12 text-center text-muted-foreground">Loading strategies...</div>
-          ) : strategies.map((strategy: any) => (
-            <StrategyCard
-              key={strategy.id}
-              strategy={strategy}
-              isCloned={clonedStrategies.includes(strategy.id)}
-              onClone={() => handleClone(strategy.id)}
-              onViewDetails={() => handleViewDetails(strategy)}
-            />
-          ))}
-        </div>
-
-        {/* Submit Strategy Coming Soon */}
-        <div className="mt-12 glass-elevated p-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 mb-6">
-            <Sparkles className="h-8 w-8 text-primary" />
-          </div>
-          <h2 className="font-display text-2xl font-bold mb-3">Submit Your Strategy</h2>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Reach Level 9 to submit your own strategies for community review.
-            Top strategies get featured and you earn rewards.
-          </p>
-          <Badge variant="secondary" className="text-sm px-4 py-1">Coming in v2.0</Badge>
-        </div>
-      </main>
 
       {/* Strategy Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
@@ -255,12 +238,12 @@ export default function StrategiesPage() {
             <>
               <DialogHeader>
                 <DialogTitle className="font-display text-2xl">{selectedStrategy.name}</DialogTitle>
-                <DialogDescription className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary">{selectedStrategy.assetClass}</Badge>
                   <span className={`font-medium ${getRiskColor(selectedStrategy.risk)}`}>
                     {selectedStrategy.risk} Risk
                   </span>
-                </DialogDescription>
+                </div>
               </DialogHeader>
 
               <div className="space-y-6 py-4">
@@ -325,6 +308,6 @@ export default function StrategiesPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

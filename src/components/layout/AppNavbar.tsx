@@ -14,12 +14,16 @@ import {
   Menu,
   X,
   ChevronRight,
+  Activity,
+  History,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
   { path: "/dashboard", label: "Cockpit", icon: LayoutDashboard },
+  { path: "/markets", label: "Markets", icon: Activity },
   { path: "/lab", label: "The Lab", icon: FlaskConical },
+  { path: "/history", label: "History", icon: History },
   { path: "/analysis", label: "Institutional", icon: ScanSearch },
   { path: "/scanner", label: "Scanner", icon: ScanSearch, minLevel: 3 },
   { path: "/strategies", label: "Strategies", icon: Layers },

@@ -8,13 +8,13 @@ import os
 import uvicorn
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from .engine import Backtester
-from .execution.portfolio import portfolio_manager
-from .data.live_feed import live_data_manager
+from engine import Backtester
+from execution.portfolio import portfolio_manager
+from data.live_feed import live_data_manager
 import asyncio
-from .research.walk_forward import WalkForwardValidator
+from research.walk_forward import WalkForwardValidator
 
-from .analysis.institutional import InstitutionalAnalyst
+from analysis.institutional import InstitutionalAnalyst
 
 app = FastAPI(title="Stratix API")
 
@@ -22,6 +22,7 @@ app = FastAPI(title="Stratix API")
 origins = [
     "http://localhost:5173", # Vite default
     "http://localhost:3000",
+    "http://localhost:8080", # Added for user environment
     "*" # Open for development
 ]
 
@@ -60,6 +61,9 @@ async def get_market_data_df(symbol: str, limit: Optional[int] = 1000):
     try:
         conn = await asyncpg.connect(DATABASE_URL)
         try:
+# ... (skipping some lines to get to get_equity_curve, but wait, replace_file_content needs contiguous block? I should split this if they are far apart)
+# They are far apart. I will do 2 chunks.
+
             # 1. Try Database
             if limit and limit > 0:
                 query = 'SELECT * FROM market_data WHERE symbol = $1 ORDER BY timestamp ASC LIMIT $2'
@@ -246,19 +250,7 @@ async def run_walk_forward(config: WalkForwardPayload):
     df = await get_market_data_df(db_symbol, limit=None)
     
     if len(df) < 500: # Heuristic check
-         # For Mock Data Fallback if DB is empty
-         if os.getenv("APP_ENV") == "dev":
-             # Create dummy DF with date index
-             dates = pd.date_range(end=datetime.now(), periods=1000, freq='H')
-             df = pd.DataFrame({
-                 'open': [50000] * 1000,
-                 'high': [51000] * 1000,
-                 'low': [49000] * 1000,
-                 'close': [50500] * 1000,
-                 'volume': [100] * 1000
-             }, index=dates)
-         else:
-             raise HTTPException(status_code=404, detail="Not enough data for Walk-Forward Analysis")
+         raise HTTPException(status_code=404, detail="Not enough data for Walk-Forward Analysis")
     
     # Ensure Index is Datetime
     if not isinstance(df.index, pd.DatetimeIndex):
@@ -285,6 +277,115 @@ async def run_walk_forward(config: WalkForwardPayload):
     return results
 
 # --- Market Data Extensions for Frontend Compatibility ---
+
+@app.get("/api/market/quotes")
+async def get_market_quotes(symbols: str):
+    """
+    Get multiple quotes in one call.
+    symbols: comma-separated list of tickers.
+    """
+    symbol_list = symbols.split(',')
+    results = []
+    
+    # Check live data manager for any available real-time prices
+    live_prices = live_data_manager.latest_prices
+    
+    # We will fetch missing ones in batch
+    to_fetch = []
+    
+    for sym in symbol_list:
+        db_sym = sym.replace('-', '/')
+        if db_sym in live_prices:
+            results.append({
+                "symbol": sym,
+                "price": live_prices[db_sym],
+                "change": 0.0, # Live feed usually doesn't store change
+                "changePercent": 0.0,
+                "volume": 0.0,
+                "marketCap": 0.0,
+                "high": live_prices[db_sym],
+                "low": live_prices[db_sym],
+                "open": live_prices[db_sym],
+                "previousClose": live_prices[db_sym]
+            })
+        else:
+            to_fetch.append(sym)
+            
+    if not to_fetch:
+        return results
+
+    # Batch fetch from YFinance for missing
+    import yfinance as yf
+    
+    # Normalize symbols for YF
+    yf_map = {}
+    yf_list = []
+    
+    for s in to_fetch:
+        yf_s = s.replace('/', '-')
+        # Crypto handling
+        if s in ["BTC", "ETH", "SOL"] or "USDT" in s:
+            if not yf_s.endswith("-USD"):
+                yf_s = yf_s.replace("USDT", "-USD") if "USDT" in yf_s else f"{yf_s}-USD"
+        
+        yf_map[yf_s] = s
+        yf_list.append(yf_s)
+        
+    try:
+        # Fetch 5 days to ensure we cover weekends/holidays for change calc
+        data = yf.download(yf_list, period="5d", group_by='ticker', threads=True, progress=False)
+        
+        # If single ticker, data structure is different
+        if len(yf_list) == 1:
+            if not data.empty:
+                last_close = data['Close'].iloc[-1]
+                prev_close = data['Close'].iloc[-2] if len(data) > 1 else last_close
+                change = last_close - prev_close
+                pct = (change / prev_close) * 100 if prev_close != 0 else 0
+                
+                results.append({
+                    "symbol": yf_map[yf_list[0]],
+                    "price": float(last_close),
+                    "change": float(change),
+                    "changePercent": float(pct),
+                    "volume": float(data['Volume'].iloc[-1]),
+                    "marketCap": 0.0,
+                    "high": float(data['High'].iloc[-1]),
+                    "low": float(data['Low'].iloc[-1]),
+                    "open": float(data['Open'].iloc[-1]),
+                    "previousClose": float(prev_close)
+                })
+        else:
+            # Multi-ticker DataFrame
+            for yf_sym, original_sym in yf_map.items():
+                try:
+                    df = data[yf_sym]
+                    if df.empty: continue
+                    
+                    last_close = df['Close'].iloc[-1]
+                    prev_close = df['Close'].iloc[-2] if len(df) > 1 else last_close
+                    change = last_close - prev_close
+                    pct = (change / prev_close) * 100 if prev_close != 0 else 0
+                    
+                    results.append({
+                        "symbol": original_sym,
+                        "price": float(last_close),
+                        "change": float(change),
+                        "changePercent": float(pct),
+                        "volume": float(df['Volume'].iloc[-1]),
+                        "marketCap": 0.0,
+                        "high": float(df['High'].iloc[-1]),
+                        "low": float(df['Low'].iloc[-1]),
+                        "open": float(df['Open'].iloc[-1]),
+                        "previousClose": float(prev_close)
+                    })
+                except Exception:
+                    continue
+                    
+    except Exception as e:
+        print(f"Batch fetch error: {e}")
+        
+    return results
 
 @app.get("/api/market/quote/{symbol}")
 async def get_market_quote(symbol: str):
@@ -448,7 +549,10 @@ async def get_research_templates():
 
 @app.post("/api/research/experiments")
 async def create_experiment(exp: Dict[str, Any]):
-    return {"id": "exp_demo_123", "status": "created", "msg": "Experiment created in Stratix Lab"}
+    import uuid
+    new_id = str(uuid.uuid4())
+    # In a real app, persist this to DB
+    return {"id": new_id, "status": "created", "msg": "Experiment created"}
 
 @app.get("/api/research/experiments")
 async def list_experiments():
@@ -609,14 +713,9 @@ async def get_market_overview():
 @app.get("/api/trading/equity-curve")
 async def get_equity_curve():
     """
-    Returns simulated equity curve for the dashboard.
-    """
-@app.get("/api/trading/equity-curve")
-async def get_equity_curve():
-    """
     Returns equity curve based on actual portfolio state and trade history.
     """
-    current_capital = portfolio_manager.current_capital
+    current_capital = portfolio_manager.balance
     history = portfolio_manager.trade_history
     
     # If no trades, return a flat line from initial capital
@@ -649,11 +748,6 @@ async def get_equity_curve():
     
     return curve
 
-@app.get("/api/trading/behavioral-analytics")
-async def get_behavioral_analytics():
-    """
-    Returns behavioral metrics.
-    """
 @app.get("/api/trading/behavioral-analytics")
 async def get_behavioral_analytics():
     """
@@ -713,6 +807,115 @@ async def get_institutional_analysis(symbol: str):
     report = analyst.analyze()
     
     return report
+
+@app.get("/api/trading/analytics")
+async def get_trading_analytics():
+    """
+    Returns aggregated trading stats from portfolio history.
+    """
+    history = portfolio_manager.trade_history
+    # Filter only EXIT trades which have PnL
+    closed_trades = [t for t in history if t.get('type') == 'EXIT']
+    
+    total_trades = len(closed_trades)
+    
+    # Initialize default structure
+    response = {
+        "totalTrades": 0,
+        "winRate": 0.0,
+        "profitFactor": 0.0,
+        "avgWin": 0.0,
+        "avgLoss": 0.0,
+        "totalPnl": 0.0,
+        "totalPnlPercent": 0.0,
+        "bestTrade": None,
+        "worstTrade": None,
+        "currentStreak": 0,
+        "longestWinStreak": 0,
+        "longestLossStreak": 0,
+        "behavioralTags": []
+    }
+
+    if total_trades == 0:
+        return response
+        
+    winning_trades = [t for t in closed_trades if t.get('pnl', 0) > 0]
+    losing_trades = [t for t in closed_trades if t.get('pnl', 0) <= 0]
+    
+    gross_profit = sum(t.get('pnl', 0) for t in winning_trades)
+    gross_loss = abs(sum(t.get('pnl', 0) for t in losing_trades))
+    
+    win_rate = (len(winning_trades) / total_trades) * 100
+    profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else float('inf') if gross_profit > 0 else 0.0
+    
+    avg_win = gross_profit / len(winning_trades) if winning_trades else 0.0
+    avg_loss = sum(t.get('pnl', 0) for t in losing_trades) / len(losing_trades) if losing_trades else 0.0
+    
+    total_pnl = gross_profit - gross_loss
+    initial_cap = portfolio_manager.initial_capital
+    try:
+        total_return_pct = (total_pnl / initial_cap) * 100
+    except ZeroDivisionError:
+        total_return_pct = 0.0
+    
+    # Simple mapping helper
+    def map_trade(t):
+        return {
+            "id": t['id'],
+            "symbol": t['symbol'],
+            "side": t['side'],
+            "entryDate": t.get('entry_time', t.get('time')), # Fallback
+            "exitDate": t.get('exit_time', t.get('time')),
+            "entryPrice": t['entry_price'],
+            "exitPrice": t['exit_price'],
+            "pnl": t['pnl'],
+            "pnlPercent": (t['pnl'] / (t['entry_price'] * t['size'])) * 100 if t['size'] > 0 else 0,
+            "isProfit": t['pnl'] > 0,
+            "duration": 0,
+            "size": t.get('size', 0)
+        }
+
+    best_trade = map_trade(max(closed_trades, key=lambda x: x['pnl'])) if closed_trades else None
+    worst_trade = map_trade(min(closed_trades, key=lambda x: x['pnl'])) if closed_trades else None
+
+    # Streak calculation
+    current_streak = 0
+    longest_win = 0
+    longest_loss = 0
+    current_win_streak = 0
+    current_loss_streak = 0
+    
+    sorted_trades = sorted(closed_trades, key=lambda x: x.get('time', ''))
+    
+    for t in sorted_trades:
+        pnl = t.get('pnl', 0)
+        if pnl > 0:
+            current_win_streak += 1
+            current_loss_streak = 0
+            current_streak = current_win_streak
+            longest_win = max(longest_win, current_win_streak)
+        else:
+            current_loss_streak += 1
+            current_win_streak = 0
+            current_streak = -current_loss_streak
+            longest_loss = max(longest_loss, current_loss_streak)
+            
+    response.update({
+        "totalTrades": total_trades,
+        "winRate": round(win_rate, 2),
+        "profitFactor": round(profit_factor, 2),
+        "avgWin": round(avg_win, 2),
+        "avgLoss": round(avg_loss, 2),
+        "totalPnl": round(total_pnl, 2),
+        "totalPnlPercent": round(total_return_pct, 2),
+        "bestTrade": best_trade,
+        "worstTrade": worst_trade,
+        "currentStreak": current_streak,
+        "longestWinStreak": longest_win,
+        "longestLossStreak": longest_loss
+    })
+    
+    return response
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

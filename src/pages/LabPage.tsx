@@ -43,12 +43,27 @@ import {
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const SAMPLE_TICKERS = [
-  { symbol: "BTC/USDT", name: "Bitcoin" },
-  { symbol: "ETH/USDT", name: "Ethereum" },
-  { symbol: "SOL/USDT", name: "Solana" },
-  { symbol: "AAPL", name: "Apple Inc." },
-  { symbol: "SPY", name: "S&P 500 ETF" },
+const POPULAR_TICKERS = [
+  {
+    group: "Crypto", items: [
+      { symbol: "BTC/USDT", name: "Bitcoin" },
+      { symbol: "ETH/USDT", name: "Ethereum" },
+      { symbol: "SOL/USDT", name: "Solana" },
+      { symbol: "AAVE/USDT", name: "Aave" },
+      { symbol: "UNI/USDT", name: "Uniswap" },
+    ]
+  },
+  {
+    group: "Stocks", items: [
+      { symbol: "AAPL", name: "Apple Inc." },
+      { symbol: "MSFT", name: "Microsoft" },
+      { symbol: "NVDA", name: "NVIDIA" },
+      { symbol: "TSLA", name: "Tesla" },
+      { symbol: "AMD", name: "AMD" },
+      { symbol: "COIN", name: "Coinbase" },
+      { symbol: "SPY", name: "S&P 500 ETF" },
+    ]
+  }
 ];
 
 // Custom Candlestick shape for Recharts
@@ -151,6 +166,10 @@ function StatPill({ label, value, variant = "default" }: {
   );
 }
 
+import { PageLayout } from "@/components/layout/PageLayout";
+
+// ... existing components ...
+
 export default function LabPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -245,530 +264,537 @@ export default function LabPage() {
   const filteredData = getFilteredData();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Subtle background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/3" />
-        <div className="grid-overlay opacity-15" />
+    <PageLayout>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Quant Research Lab</h1>
+          <p className="text-sm text-muted-foreground">Professional backtesting & experiment tracking</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "backtest" | "research")} className="w-auto">
+            <TabsList className="glass">
+              <TabsTrigger value="backtest" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Backtest
+              </TabsTrigger>
+              <TabsTrigger value="research" className="gap-2">
+                <FlaskConical className="h-4 w-4" />
+                Research
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
-      <AppNavbar />
+      <div className="grid lg:grid-cols-12 gap-4">
+        {/* Left Sidebar - Strategy Controls */}
+        <div className="lg:col-span-3 space-y-4">
+          <Panel title="Strategy" icon={Zap}>
+            <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+              <SelectTrigger className="bg-card-elevated border-border/50">
+                <SelectValue placeholder="Select strategy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ema-crossover">EMA Crossover</SelectItem>
+                <SelectItem value="rsi-reversion">RSI Mean Reversion</SelectItem>
+                <SelectItem value="bollinger-bands">Bollinger Bands</SelectItem>
+              </SelectContent>
+            </Select>
+          </Panel>
 
-      <main className="relative container mx-auto px-6 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-display text-2xl font-bold">Quant Research Lab</h1>
-            <p className="text-sm text-muted-foreground">Professional backtesting & experiment tracking</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "backtest" | "research")} className="w-auto">
-              <TabsList className="glass">
-                <TabsTrigger value="backtest" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Backtest
-                </TabsTrigger>
-                <TabsTrigger value="research" className="gap-2">
-                  <FlaskConical className="h-4 w-4" />
-                  Research
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-12 gap-4">
-          {/* Left Sidebar - Strategy Controls */}
-          <div className="lg:col-span-3 space-y-4">
-            <Panel title="Strategy" icon={Zap}>
-              <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
-                <SelectTrigger className="bg-card-elevated border-border/50">
-                  <SelectValue placeholder="Select strategy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ema-crossover">EMA Crossover</SelectItem>
-                  <SelectItem value="rsi-reversion">RSI Mean Reversion</SelectItem>
-                  <SelectItem value="bollinger-bands">Bollinger Bands</SelectItem>
-                </SelectContent>
-              </Select>
-            </Panel>
-
-            <Panel title="Asset" icon={BarChart3}>
-              <Select value={selectedTicker} onValueChange={setSelectedTicker}>
-                <SelectTrigger className="bg-card-elevated border-border/50">
-                  <SelectValue placeholder="Select ticker" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SAMPLE_TICKERS.map((ticker) => (
-                    <SelectItem key={ticker.symbol} value={ticker.symbol}>
-                      <span className="font-mono">{ticker.symbol}</span>
-                      <span className="text-muted-foreground ml-2">- {ticker.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Panel>
-
-            <Panel title="Risk Management" icon={Settings2}>
-              <div className="space-y-5">
-                {[
-                  { label: "Risk Per Trade", value: params.riskPerTrade, key: "riskPerTrade", min: 0.1, max: 5, step: 0.1, suffix: "%" },
-                  { label: "Max Drawdown", value: params.maxDrawdown, key: "maxDrawdown", min: 5, max: 50, step: 1, suffix: "%" },
-                  { label: "Initial Capital", value: params.initialCapital, key: "initialCapital", min: 1000, max: 100000, step: 1000, suffix: "$" },
-                ].map((param) => (
-                  <div key={param.key}>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">{param.label}</span>
-                      <span className="font-mono font-medium text-primary">
-                        {param.suffix === "$" ? "$" : ""}{param.value}{param.suffix !== "$" ? param.suffix : ""}
-                      </span>
-                    </div>
-                    <Slider
-                      value={[param.value]}
-                      onValueChange={([v]) => setParams((p) => ({ ...p, [param.key]: v }))}
-                      min={param.min}
-                      max={param.max}
-                      step={param.step}
-                      className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:shadow-glow-sm"
-                    />
-                  </div>
-                ))}
-              </div>
-            </Panel>
-
-            <Panel title="Strategy Parameters" icon={Settings2}>
-              <div className="space-y-5">
-                {[
-                  { label: "Fast EMA", value: params.fastEMA, key: "fastEMA", min: 5, max: 50, step: 1 },
-                  { label: "Slow EMA", value: params.slowEMA, key: "slowEMA", min: 20, max: 200, step: 5 },
-                ].map((param) => (
-                  <div key={param.key}>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">{param.label}</span>
-                      <span className="font-mono font-medium text-primary">
-                        {param.value}
-                      </span>
-                    </div>
-                    <Slider
-                      value={[param.value]}
-                      onValueChange={([v]) => setParams((p) => ({ ...p, [param.key]: v }))}
-                      min={param.min}
-                      max={param.max}
-                      step={param.step}
-                      className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:shadow-glow-sm"
-                    />
-                  </div>
-                ))}
-              </div>
-            </Panel>
-
-            <Button
-              className="w-full h-12 text-base font-semibold btn-glow"
-              onClick={handleRunBacktest}
-              disabled={isRunning}
-            >
-              {isRunning ? (
-                <>
-                  <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3" />
-                  Running Backtest...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-5 w-5" />
-                  Run Backtest
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Center - Chart & Results */}
-          <div className="lg:col-span-6 space-y-4">
-            {/* Chart Panel */}
-            <Panel
-              title={selectedTicker}
-              icon={BarChart3}
-              className="h-fit"
-              headerAction={
-                <div className="flex items-center gap-2">
-                  {result && (
-                    <Badge variant="secondary" className="font-mono text-2xs bg-primary/10 text-primary border-primary/20">
-                      {result.signals.length} signals
-                    </Badge>
-                  )}
-                  <div className="flex gap-0.5 ml-2">
-                    {(["1D", "1W", "1M", "1Y", "5Y"] as const).map((tf) => (
-                      <button
-                        key={tf}
-                        onClick={() => setSelectedTimeframe(tf)}
-                        className={`px-2 py-1 rounded text-2xs font-medium transition-all ${selectedTimeframe === tf
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                          }`}
-                      >
-                        {tf}
-                      </button>
+          <Panel title="Market" icon={BarChart3}>
+            <Select value={selectedTicker} onValueChange={setSelectedTicker}>
+              <SelectTrigger className="bg-card-elevated border-border/50">
+                <SelectValue placeholder="Select asset" />
+              </SelectTrigger>
+              <SelectContent>
+                {POPULAR_TICKERS.map((group) => (
+                  <div key={group.group}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/20">{group.group}</div>
+                    {group.items.map((ticker) => (
+                      <SelectItem key={ticker.symbol} value={ticker.symbol}>
+                        <span className="font-mono font-medium">{ticker.symbol}</span>
+                        <span className="text-muted-foreground text-xs ml-2">- {ticker.name}</span>
+                      </SelectItem>
                     ))}
                   </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </Panel>
+
+          <Panel title="Risk Management" icon={Settings2}>
+            <div className="space-y-5">
+              {[
+                { label: "Risk Per Trade", value: params.riskPerTrade, key: "riskPerTrade", min: 0.1, max: 5, step: 0.1, suffix: "%" },
+                { label: "Max Drawdown", value: params.maxDrawdown, key: "maxDrawdown", min: 5, max: 50, step: 1, suffix: "%" },
+                { label: "Initial Capital", value: params.initialCapital, key: "initialCapital", min: 1000, max: 100000, step: 1000, suffix: "$" },
+              ].map((param) => (
+                <div key={param.key}>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">{param.label}</span>
+                    <span className="font-mono font-medium text-primary">
+                      {param.suffix === "$" ? "$" : ""}{param.value}{param.suffix !== "$" ? param.suffix : ""}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[param.value]}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, [param.key]: v }))}
+                    min={param.min}
+                    max={param.max}
+                    step={param.step}
+                    className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:shadow-glow-sm"
+                  />
                 </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Strategy Parameters" icon={Settings2}>
+            <div className="space-y-5">
+              {[
+                { label: "Fast EMA", value: params.fastEMA, key: "fastEMA", min: 5, max: 50, step: 1 },
+                { label: "Slow EMA", value: params.slowEMA, key: "slowEMA", min: 20, max: 200, step: 5 },
+              ].map((param) => (
+                <div key={param.key}>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">{param.label}</span>
+                    <span className="font-mono font-medium text-primary">
+                      {param.value}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[param.value]}
+                    onValueChange={([v]) => setParams((p) => ({ ...p, [param.key]: v }))}
+                    min={param.min}
+                    max={param.max}
+                    step={param.step}
+                    className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:shadow-glow-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          </Panel>
+
+          <Button
+            className="w-full h-12 text-base font-semibold btn-glow"
+            onClick={handleRunBacktest}
+            disabled={isRunning}
+          >
+            {isRunning ? (
+              <>
+                <div className="h-5 w-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3" />
+                Running Backtest...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-5 w-5" />
+                Run Backtest
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Center - Chart & Results */}
+        <div className="lg:col-span-6 space-y-4">
+          {/* Chart Panel */}
+          <Panel
+            title={selectedTicker}
+            icon={BarChart3}
+            className="h-fit"
+            headerAction={
+              <div className="flex items-center gap-2">
+                {result && (
+                  <Badge variant="secondary" className="font-mono text-2xs bg-primary/10 text-primary border-primary/20">
+                    {result.signals.length} signals
+                  </Badge>
+                )}
+                <div className="flex gap-0.5 ml-2">
+                  {(["1D", "1W", "1M", "1Y", "5Y"] as const).map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => setSelectedTimeframe(tf)}
+                      className={`px-2 py-1 rounded text-2xs font-medium transition-all ${selectedTimeframe === tf
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            }
+          >
+            <div className="h-80">
+              {result ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={filteredData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--chart-grid))" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(date) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      interval="preserveStartEnd"
+                      axisLine={{ stroke: "hsl(var(--border))" }}
+                    />
+                    <YAxis
+                      domain={["auto", "auto"]}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(value) => `$${value.toFixed(0)}`}
+                      axisLine={{ stroke: "hsl(var(--border))" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        boxShadow: "0 8px 24px hsl(0 0% 0% / 0.4)",
+                      }}
+                      formatter={(value: number, name: string) => [
+                        `$${value.toFixed(2)}`,
+                        name.charAt(0).toUpperCase() + name.slice(1),
+                      ]}
+                    />
+                    <Bar
+                      dataKey="high"
+                      shape={(props: any) => <CandlestickShape {...props} />}
+                      isAnimationActive={false}
+                    />
+                    {result.signals.slice(0, 10).map((signal, i) => (
+                      <ReferenceLine
+                        key={i}
+                        x={signal.date}
+                        stroke={signal.type === "buy" ? "hsl(var(--profit))" : "hsl(var(--loss))"}
+                        strokeDasharray="3 3"
+                        strokeOpacity={0.6}
+                      />
+                    ))}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p className="text-sm">Run a backtest to see chart data</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          {/* Results Stats */}
+          {result && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <StatPill
+                label="Net Profit"
+                value={`${result.results.totalReturn >= 0 ? "+" : ""}${result.results.totalReturn.toFixed(2)}%`}
+                variant={result.results.totalReturn >= 0 ? "profit" : "loss"}
+              />
+              <StatPill
+                label="Win Rate"
+                value={`${result.results.winRate.toFixed(1)}%`}
+                variant={result.results.winRate >= 50 ? "profit" : "loss"}
+              />
+              <StatPill
+                label="Profit Factor"
+                value={result.results.profitFactor.toFixed(2)}
+                variant={result.results.profitFactor >= 1.5 ? "profit" : "default"}
+              />
+              <StatPill
+                label="Max Drawdown"
+                value={`-${result.results.maxDrawdown.toFixed(2)}%`}
+                variant="loss"
+              />
+              <StatPill
+                label="Sharpe Ratio"
+                value={result.results.sharpeRatio.toFixed(2)}
+                variant={result.results.sharpeRatio > 1 ? "profit" : "default"}
+              />
+              <StatPill
+                label="Sortino"
+                value={result.results.sortinoRatio?.toFixed(2) || "-"}
+              />
+              <StatPill
+                label="Avg Win"
+                value={`$${result.results.avgWin.toFixed(2)}`}
+                variant="profit"
+              />
+              <StatPill
+                label="Avg Loss"
+                value={`-$${Math.abs(result.results.avgLoss).toFixed(2)}`}
+                variant="loss"
+              />
+            </div>
+          )}
+
+          {/* Trade History */}
+          {result && (
+            <Panel title="Trade History" icon={Clock}>
+              <div className="max-h-64 overflow-y-auto scrollbar-hide">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Entry</th>
+                      <th>Exit</th>
+                      <th>P/L</th>
+                      <th>Duration</th>
+                      <th>Journal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.tradeHistory.slice(0, 15).map((trade) => (
+                      <tr key={trade.id}>
+                        <td className="text-2xs text-muted-foreground">{trade.entryDate}</td>
+                        <td>${trade.entryPrice}</td>
+                        <td>${trade.exitPrice}</td>
+                        <td className={trade.isProfit ? "text-profit" : "text-loss"}>
+                          <span className="flex items-center gap-1">
+                            {trade.isProfit ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                            {trade.pnlPercent > 0 ? "+" : ""}{trade.pnlPercent}%
+                          </span>
+                        </td>
+                        <td className="text-muted-foreground">{trade.duration}d</td>
+                        <td>
+                          <Select defaultValue={trade.journalTag || ""}>
+                            <SelectTrigger className="h-7 text-2xs w-24 bg-transparent border-border/30">
+                              <SelectValue placeholder="Tag..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {journalTags.map((tag) => (
+                                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          )}
+        </div>
+
+        {/* Right Sidebar - News */}
+        <div className="lg:col-span-3 space-y-4">
+          <Collapsible open={newsOpen} onOpenChange={setNewsOpen}>
+            <Panel
+              title="Market Intelligence"
+              icon={Newspaper}
+              headerAction={
+                <CollapsibleTrigger asChild>
+                  <button className="p-1 hover:bg-muted/50 rounded transition-colors">
+                    {newsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                </CollapsibleTrigger>
               }
             >
-              <div className="h-80">
-                {result ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={filteredData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--chart-grid))" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                        tickFormatter={(date) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        interval="preserveStartEnd"
-                        axisLine={{ stroke: "hsl(var(--border))" }}
-                      />
-                      <YAxis
-                        domain={["auto", "auto"]}
-                        tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                        tickFormatter={(value) => `$${value.toFixed(0)}`}
-                        axisLine={{ stroke: "hsl(var(--border))" }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--popover))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                          boxShadow: "0 8px 24px hsl(0 0% 0% / 0.4)",
-                        }}
-                        formatter={(value: number, name: string) => [
-                          `$${value.toFixed(2)}`,
-                          name.charAt(0).toUpperCase() + name.slice(1),
-                        ]}
-                      />
-                      <Bar
-                        dataKey="high"
-                        shape={(props: any) => <CandlestickShape {...props} />}
-                        isAnimationActive={false}
-                      />
-                      {result.signals.slice(0, 10).map((signal, i) => (
-                        <ReferenceLine
-                          key={i}
-                          x={signal.date}
-                          stroke={signal.type === "buy" ? "hsl(var(--profit))" : "hsl(var(--loss))"}
-                          strokeDasharray="3 3"
-                          strokeOpacity={0.6}
-                        />
-                      ))}
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p className="text-sm">Run a backtest to see chart data</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Panel>
-
-            {/* Results Stats */}
-            {result && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <StatPill
-                  label="Net Profit"
-                  value={`${result.results.totalReturn >= 0 ? "+" : ""}${result.results.totalReturn.toFixed(2)}%`}
-                  variant={result.results.totalReturn >= 0 ? "profit" : "loss"}
-                />
-                <StatPill
-                  label="Win Rate"
-                  value={`${result.results.winRate.toFixed(1)}%`}
-                  variant={result.results.winRate >= 50 ? "profit" : "loss"}
-                />
-                <StatPill
-                  label="Profit Factor"
-                  value={result.results.profitFactor.toFixed(2)}
-                  variant={result.results.profitFactor >= 1.5 ? "profit" : "default"}
-                />
-                <StatPill
-                  label="Max Drawdown"
-                  value={`-${result.results.maxDrawdown.toFixed(2)}%`}
-                  variant="loss"
-                />
-                <StatPill
-                  label="Sharpe Ratio"
-                  value={result.results.sharpeRatio.toFixed(2)}
-                  variant={result.results.sharpeRatio > 1 ? "profit" : "default"}
-                />
-                <StatPill
-                  label="Sortino"
-                  value={result.results.sortinoRatio?.toFixed(2) || "-"}
-                />
-                <StatPill
-                  label="Avg Win"
-                  value={`$${result.results.avgWin.toFixed(2)}`}
-                  variant="profit"
-                />
-                <StatPill
-                  label="Avg Loss"
-                  value={`-$${Math.abs(result.results.avgLoss).toFixed(2)}`}
-                  variant="loss"
-                />
-              </div>
-            )}
-
-            {/* Trade History */}
-            {result && (
-              <Panel title="Trade History" icon={Clock}>
-                <div className="max-h-64 overflow-y-auto scrollbar-hide">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Entry</th>
-                        <th>Exit</th>
-                        <th>P/L</th>
-                        <th>Duration</th>
-                        <th>Journal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.tradeHistory.slice(0, 15).map((trade) => (
-                        <tr key={trade.id}>
-                          <td className="text-2xs text-muted-foreground">{trade.entryDate}</td>
-                          <td>${trade.entryPrice}</td>
-                          <td>${trade.exitPrice}</td>
-                          <td className={trade.isProfit ? "text-profit" : "text-loss"}>
-                            <span className="flex items-center gap-1">
-                              {trade.isProfit ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                              {trade.pnlPercent > 0 ? "+" : ""}{trade.pnlPercent}%
-                            </span>
-                          </td>
-                          <td className="text-muted-foreground">{trade.duration}d</td>
-                          <td>
-                            <Select defaultValue={trade.journalTag || ""}>
-                              <SelectTrigger className="h-7 text-2xs w-24 bg-transparent border-border/30">
-                                <SelectValue placeholder="Tag..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="">None</SelectItem>
-                                {journalTags.map((tag) => (
-                                  <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-            )}
-          </div>
-
-          {/* Right Sidebar - News */}
-          <div className="lg:col-span-3 space-y-4">
-            <Collapsible open={newsOpen} onOpenChange={setNewsOpen}>
-              <Panel
-                title="Market Context"
-                icon={Newspaper}
-                headerAction={
-                  <CollapsibleTrigger asChild>
-                    <button className="p-1 hover:bg-muted/50 rounded transition-colors">
-                      {newsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                  </CollapsibleTrigger>
-                }
-              >
-                <CollapsibleContent>
-                  <div className="space-y-3">
-                    {news.map((item, i) => (
-                      <div key={i} className="group p-3 rounded-lg bg-card-elevated/50 hover:bg-card-hover transition-colors cursor-pointer">
+              <CollapsibleContent>
+                <div className="space-y-3">
+                  {news.length > 0 ? (
+                    news.map((item, i) => (
+                      <a
+                        key={i}
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block group p-3 rounded-lg bg-card-elevated/50 hover:bg-card-hover transition-all duration-200 border border-transparent hover:border-primary/20"
+                      >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm leading-snug group-hover:text-primary transition-colors">{item.title}</p>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                          <p className="text-sm font-medium leading-snug group-hover:text-primary transition-colors line-clamp-2">{item.title}</p>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-2xs text-muted-foreground">{item.source}</span>
-                          <span className="text-2xs text-muted-foreground">•</span>
-                          <span className="text-2xs text-muted-foreground">{item.timestamp}</span>
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1 rounded-sm">{item.source}</Badge>
+                          <span className="text-2xs text-muted-foreground">{new Date(item.timestamp).toLocaleDateString()}</span>
                         </div>
+                      </a>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                      <Newspaper className="h-10 w-10 mb-2 opacity-10" />
+                      <p className="text-sm">No recent news found</p>
+                      <p className="text-xs opacity-70">Select a major ticker like BTC or AAPL</p>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Panel>
+          </Collapsible>
+
+          {/* Quick Tips */}
+          <Panel title="Pro Tips" icon={Zap}>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>• Button-triggered backtests prevent server overload</p>
+              <p>• Tag trades to build behavioral insights</p>
+              <p>• Check news for context before deployment</p>
+            </div>
+          </Panel>
+        </div>
+      </div>
+
+      {/* RESEARCH TAB */}
+      {activeTab === "research" && (
+        <div className="space-y-6">
+          {/* Strategy Templates Section */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display text-xl font-bold">Strategy Templates</h2>
+                <p className="text-sm text-muted-foreground">Professional playbooks (Momentum, Mean-Reversion, Seasonality)</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => setSelectedTemplate(template)}
+                  className={`glass-interactive p-6 text-left transition-all ${selectedTemplate?.id === template.id
+                    ? 'ring-2 ring-primary shadow-glow'
+                    : ''
+                    }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-display font-semibold text-lg mb-1">{template.name}</h3>
+                      <Badge variant="secondary" className="text-2xs">
+                        {template.assetClass}
+                      </Badge>
+                    </div>
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <FlaskConical className="h-5 w-5 text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {template.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(template.params).slice(0, 3).map(([key, value]) => (
+                      <div key={key} className="text-2xs px-2 py-1 rounded bg-card-elevated border border-border/30">
+                        <span className="text-muted-foreground">{key}:</span>{' '}
+                        <span className="font-mono text-primary">{String(value)}</span>
                       </div>
                     ))}
                   </div>
-                </CollapsibleContent>
-              </Panel>
-            </Collapsible>
+                </button>
+              ))}
+            </div>
+          </div>
 
-            {/* Quick Tips */}
-            <Panel title="Pro Tips" icon={Zap}>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p>• Button-triggered backtests prevent server overload</p>
-                <p>• Tag trades to build behavioral insights</p>
-                <p>• Check news for context before deployment</p>
-              </div>
-            </Panel>
+          {/* Experiments Grid */}
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left: Experiments List */}
+            <div className="lg:col-span-4 space-y-4">
+              <Panel title="Experiments" icon={Trophy}>
+                <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
+                  {experiments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FlaskConical className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm">No experiments yet</p>
+                      <p className="text-xs mt-1">Backend ready - create your first experiment</p>
+                    </div>
+                  ) : (
+                    experiments.map((exp) => (
+                      <button
+                        key={exp.experiment_id}
+                        onClick={() => setSelectedExperiment(exp.experiment_id)}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${selectedExperiment === exp.experiment_id
+                          ? 'bg-primary/10 border border-primary/20'
+                          : 'bg-card-elevated hover:bg-card-hover border border-border/30'
+                          }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-medium text-sm">{exp.name}</h4>
+                          <Badge variant="outline" className="text-2xs">
+                            {exp.run_count || 0} runs
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{exp.description}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-2xs">
+                            {exp.strategy_type}
+                          </Badge>
+                          <span className="text-2xs text-muted-foreground">
+                            {new Date(exp.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </Panel>
+            </div>
+
+            {/* Right: Runs & Metrics */}
+            <div className="lg:col-span-8">
+              {selectedExperiment ? (
+                <Panel title="Experiment Runs" icon={TrendUp}>
+                  {experimentRuns.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                      <p className="text-sm font-medium mb-1">No runs recorded yet</p>
+                      <p className="text-xs">Run backtests to log performance</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="overflow-x-auto">
+                        <table className="data-table w-full">
+                          <thead>
+                            <tr>
+                              <th className="text-left">Run</th>
+                              <th>Symbol</th>
+                              <th>Sharpe</th>
+                              <th>Sortino</th>
+                              <th>MaxDD</th>
+                              <th>Hit%</th>
+                              <th>Return</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {experimentRuns.map((run) => (
+                              <tr key={run.run_id}>
+                                <td className="font-medium">{run.run_name}</td>
+                                <td className="font-mono text-sm">{run.symbol}</td>
+                                <td className={run.metrics.sharpe_ratio && run.metrics.sharpe_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
+                                  {run.metrics.sharpe_ratio?.toFixed(2) || '-'}
+                                </td>
+                                <td className={run.metrics.sortino_ratio && run.metrics.sortino_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
+                                  {run.metrics.sortino_ratio?.toFixed(2) || '-'}
+                                </td>
+                                <td className="text-loss">
+                                  {run.metrics.max_drawdown ? `-${run.metrics.max_drawdown}%` : '-'}
+                                </td>
+                                <td className={run.metrics.hit_rate && run.metrics.hit_rate > 50 ? 'text-profit' : 'text-warning'}>
+                                  {run.metrics.hit_rate ? `${run.metrics.hit_rate}%` : '-'}
+                                </td>
+                                <td className={run.metrics.total_return && run.metrics.total_return > 0 ? 'text-profit' : 'text-loss'}>
+                                  {run.metrics.total_return ? `${run.metrics.total_return > 0 ? '+' : ''}${run.metrics.total_return}%` : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </Panel>
+              ) : (
+                <div className="glass h-full flex items-center justify-center py-24">
+                  <div className="text-center text-muted-foreground">
+                    <FlaskConical className="h-20 w-20 mx-auto mb-4 opacity-10" />
+                    <p className="font-medium mb-1">Select an experiment</p>
+                    <p className="text-sm">View runs and compare metrics</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* RESEARCH TAB */}
-        {activeTab === "research" && (
-          <div className="space-y-6">
-            {/* Strategy Templates Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="font-display text-xl font-bold">Strategy Templates</h2>
-                  <p className="text-sm text-muted-foreground">Professional playbooks (Momentum, Mean-Reversion, Seasonality)</p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                {templates.map((template) => (
-                  <button
-                    key={template.template_id}
-                    onClick={() => setSelectedTemplate(template)}
-                    className={`glass-interactive p-6 text-left transition-all ${selectedTemplate?.template_id === template.template_id
-                      ? 'ring-2 ring-primary shadow-glow'
-                      : ''
-                      }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-display font-semibold text-lg mb-1">{template.name}</h3>
-                        <Badge variant="secondary" className="text-2xs">
-                          {template.category}
-                        </Badge>
-                      </div>
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <FlaskConical className="h-5 w-5 text-primary" />
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {template.description}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(template.default_params).slice(0, 3).map(([key, value]) => (
-                        <div key={key} className="text-2xs px-2 py-1 rounded bg-card-elevated border border-border/30">
-                          <span className="text-muted-foreground">{key}:</span>{' '}
-                          <span className="font-mono text-primary">{String(value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Experiments Grid */}
-            <div className="grid lg:grid-cols-12 gap-6">
-              {/* Left: Experiments List */}
-              <div className="lg:col-span-4 space-y-4">
-                <Panel title="Experiments" icon={Trophy}>
-                  <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
-                    {experiments.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FlaskConical className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p className="text-sm">No experiments yet</p>
-                        <p className="text-xs mt-1">Backend ready - create your first experiment</p>
-                      </div>
-                    ) : (
-                      experiments.map((exp) => (
-                        <button
-                          key={exp.experiment_id}
-                          onClick={() => setSelectedExperiment(exp.experiment_id)}
-                          className={`w-full text-left p-3 rounded-lg transition-all ${selectedExperiment === exp.experiment_id
-                            ? 'bg-primary/10 border border-primary/20'
-                            : 'bg-card-elevated hover:bg-card-hover border border-border/30'
-                            }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-sm">{exp.name}</h4>
-                            <Badge variant="outline" className="text-2xs">
-                              {exp.run_count || 0} runs
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{exp.description}</p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-2xs">
-                              {exp.strategy_type}
-                            </Badge>
-                            <span className="text-2xs text-muted-foreground">
-                              {new Date(exp.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </Panel>
-              </div>
-
-              {/* Right: Runs & Metrics */}
-              <div className="lg:col-span-8">
-                {selectedExperiment ? (
-                  <Panel title="Experiment Runs" icon={TrendUp}>
-                    {experimentRuns.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                        <p className="text-sm font-medium mb-1">No runs recorded yet</p>
-                        <p className="text-xs">Run backtests to log performance</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="overflow-x-auto">
-                          <table className="data-table w-full">
-                            <thead>
-                              <tr>
-                                <th className="text-left">Run</th>
-                                <th>Symbol</th>
-                                <th>Sharpe</th>
-                                <th>Sortino</th>
-                                <th>MaxDD</th>
-                                <th>Hit%</th>
-                                <th>Return</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {experimentRuns.map((run) => (
-                                <tr key={run.run_id}>
-                                  <td className="font-medium">{run.run_name}</td>
-                                  <td className="font-mono text-sm">{run.symbol}</td>
-                                  <td className={run.metrics.sharpe_ratio && run.metrics.sharpe_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
-                                    {run.metrics.sharpe_ratio?.toFixed(2) || '-'}
-                                  </td>
-                                  <td className={run.metrics.sortino_ratio && run.metrics.sortino_ratio > 1 ? 'text-profit' : 'text-muted-foreground'}>
-                                    {run.metrics.sortino_ratio?.toFixed(2) || '-'}
-                                  </td>
-                                  <td className="text-loss">
-                                    {run.metrics.max_drawdown ? `-${run.metrics.max_drawdown}%` : '-'}
-                                  </td>
-                                  <td className={run.metrics.hit_rate && run.metrics.hit_rate > 50 ? 'text-profit' : 'text-warning'}>
-                                    {run.metrics.hit_rate ? `${run.metrics.hit_rate}%` : '-'}
-                                  </td>
-                                  <td className={run.metrics.total_return && run.metrics.total_return > 0 ? 'text-profit' : 'text-loss'}>
-                                    {run.metrics.total_return ? `${run.metrics.total_return > 0 ? '+' : ''}${run.metrics.total_return}%` : '-'}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </Panel>
-                ) : (
-                  <div className="glass h-full flex items-center justify-center py-24">
-                    <div className="text-center text-muted-foreground">
-                      <FlaskConical className="h-20 w-20 mx-auto mb-4 opacity-10" />
-                      <p className="font-medium mb-1">Select an experiment</p>
-                      <p className="text-sm">View runs and compare metrics</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </PageLayout>
   );
 }

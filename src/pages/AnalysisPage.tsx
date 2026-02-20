@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 
+import { PageLayout } from "@/components/layout/PageLayout";
+
 export default function AnalysisPage() {
     const [symbol, setSymbol] = useState("BTC/USDT");
     const [searchInput, setSearchInput] = useState("BTC/USDT");
@@ -37,7 +39,7 @@ export default function AnalysisPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <PageLayout>
             {/* Header */}
             <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-40">
                 <div className="container mx-auto px-6 py-4">
@@ -239,7 +241,7 @@ export default function AnalysisPage() {
                     </>
                 )}
             </div>
-        </div>
+        </PageLayout>
     );
 }
 

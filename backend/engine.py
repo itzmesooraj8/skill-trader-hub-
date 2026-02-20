@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from .strategies import StrategyFactory
-from .risk import RiskEngine
+from strategies import StrategyFactory
+from risk import RiskEngine
 
 class Backtester:
     def __init__(self, data: pd.DataFrame, initial_capital=10000.0, commission=0.001):

@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
-from .regime import MarketRegimeDetector
-from .fundamentals import FundamentalAnalysis
-from .monte_carlo import MonteCarloSimulator
+from analysis.regime import MarketRegimeDetector
+from analysis.fundamentals import FundamentalAnalysis
+from analysis.monte_carlo import MonteCarloSimulator
 import pandas as pd
 import logging
 
