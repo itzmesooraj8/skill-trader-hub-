@@ -7,10 +7,12 @@ import matplotlib.pyplot as plt
 # PARAMETERS
 # ==============================
 
-ticker = "NVDA"
-start = "2023-01-01"
-end = "2024-12-31"
+ticker = "AAPL"
+start = "2019-01-01"
+end = "2024-01-01"
 
+account_size = 10_000_000
+risk_per_trade = 0.05
 cost = 0.001
 
 # ==============================
@@ -27,6 +29,12 @@ data = data[['Open','High','Low','Close','Volume']].copy()
 close = data['Close']
 high = data['High']
 low = data['Low']
+
+# ==============================
+# EMA TREND FILTER
+# ==============================
+
+data['ema200'] = close.ewm(span=200, adjust=False).mean()
 
 # ==============================
 # RSI
@@ -47,16 +55,7 @@ rs = avg_gain / avg_loss
 data['RSI'] = 100 - (100/(1+rs))
 
 # ==============================
-# TREND REGIME (EMA200)
-# ==============================
-
-data['ema200'] = close.ewm(span=200, adjust=False).mean()
-
-data['bull_regime'] = close > data['ema200']
-data['bear_regime'] = close < data['ema200']
-
-# ==============================
-# VOLATILITY FILTER (ATR)
+# ATR
 # ==============================
 
 tr1 = high - low
@@ -66,33 +65,23 @@ tr3 = abs(low - close.shift())
 tr = pd.concat([tr1,tr2,tr3], axis=1).max(axis=1)
 
 data['ATR'] = tr.rolling(14).mean()
-data['ATR_avg'] = data['ATR'].rolling(50).mean()
-
-data['volatility_ok'] = data['ATR'] > data['ATR_avg']
 
 # ==============================
-# ADAPTIVE RSI THRESHOLDS
+# STRICT ENTRY CONDITIONS
 # ==============================
 
-vol_factor = (data['ATR'] / close) * 100
-
-data['rsi_low'] = 30 + vol_factor
-data['rsi_high'] = 70 - vol_factor
-
-# ==============================
-# ENTRY CONDITIONS
-# ==============================
-
-data['long_entry'] = (
-    (data['RSI'] < data['rsi_low']) &
-    data['bull_regime'] &
-    data['volatility_ok']
+data['long_signal'] = (
+    (close > data['ema200']) &
+    (data['RSI'] < 30) &
+    (close > data['ema200'] * 1.002) &
+    (data['ATR'].notna())
 )
 
-data['short_entry'] = (
-    (data['RSI'] > data['rsi_high']) &
-    data['bear_regime'] &
-    data['volatility_ok']
+data['short_signal'] = (
+    (close < data['ema200']) &
+    (data['RSI'] > 70) &
+    (close < data['ema200'] * 0.998) &
+    (data['ATR'].notna())
 )
 
 # ==============================
@@ -100,54 +89,91 @@ data['short_entry'] = (
 # ==============================
 
 position = 0
+entry_price = 0
+stop_price = 0
+shares = 0
+
 positions = []
+equity_curve = []
+
+equity = account_size
 
 for i in range(len(data)):
 
+    price = close.iloc[i]
     rsi = data['RSI'].iloc[i]
-    low_th = data['rsi_low'].iloc[i]
-    high_th = data['rsi_high'].iloc[i]
+    atr = data['ATR'].iloc[i]
 
-    long_entry = bool(data['long_entry'].iloc[i])
-    short_entry = bool(data['short_entry'].iloc[i])
+    long_signal = data['long_signal'].iloc[i]
+    short_signal = data['short_signal'].iloc[i]
+
+    # ==========================
+    # NO POSITION
+    # ==========================
 
     if position == 0:
 
-        if long_entry:
-            position = 1
+        if pd.notna(atr):
 
-        elif short_entry:
-            position = -1
+            risk_dollars = equity * risk_per_trade
+
+            if long_signal:
+
+                entry_price = price
+                stop_price = price - atr
+
+                shares = risk_dollars / atr
+
+                position = 1
+
+            elif short_signal:
+
+                entry_price = price
+                stop_price = price + atr
+
+                shares = risk_dollars / atr
+
+                position = -1
+
+    # ==========================
+    # LONG POSITION
+    # ==========================
 
     elif position == 1:
 
-        if rsi > 60:
+        stop_hit = price <= stop_price
+        momentum_exit = rsi > 55
+
+        if stop_hit or momentum_exit:
+
+            equity += shares * (price - entry_price)
             position = 0
+
+    # ==========================
+    # SHORT POSITION
+    # ==========================
 
     elif position == -1:
 
-        if rsi < 40:
+        stop_hit = price >= stop_price
+        momentum_exit = rsi < 45
+
+        if stop_hit or momentum_exit:
+
+            equity += shares * (entry_price - price)
             position = 0
 
     positions.append(position)
+    equity_curve.append(equity)
 
 data['position'] = positions
+data['equity'] = equity_curve
 
 # ==============================
 # RETURNS
 # ==============================
 
-data['returns'] = close.pct_change()
-
-data['strategy_returns'] = data['returns'] * data['position'].shift(1)
-
-data['trades'] = data['position'].diff().abs()
-
-data['strategy_returns'] -= data['trades'] * cost
-
-data['strategy_returns'] = data['strategy_returns'].fillna(0)
-
-data['equity'] = (1 + data['strategy_returns']).cumprod()
+returns = pd.Series(equity_curve).pct_change().fillna(0)
 
 # ==============================
 # METRICS
@@ -155,15 +181,12 @@ data['equity'] = (1 + data['strategy_returns']).cumprod()
 
 years = len(data) / 252
 
-CAGR = data['equity'].iloc[-1]**(1/years) - 1
+CAGR = (equity_curve[-1] / account_size) ** (1/years) - 1
 
-Sharpe = (
-    data['strategy_returns'].mean() /
-    data['strategy_returns'].std()
-) * np.sqrt(252)
+Sharpe = (returns.mean() / returns.std()) * np.sqrt(252)
 
-rolling_max = data['equity'].cummax()
-drawdown = data['equity'] / rolling_max - 1
+rolling_max = pd.Series(equity_curve).cummax()
+drawdown = pd.Series(equity_curve) / rolling_max - 1
 max_dd = drawdown.min()
 
 print("===== RESULTS =====")
@@ -172,7 +195,7 @@ print("Sharpe:", round(Sharpe,2))
 print("Max Drawdown:", round(max_dd*100,2),"%")
 
 # ==============================
-# PRICE CHART
+# PRICE CHART + SIGNALS
 # ==============================
 
 plt.figure(figsize=(14,6))
@@ -180,12 +203,17 @@ plt.figure(figsize=(14,6))
 plt.plot(data.index, close, label="Price")
 plt.plot(data.index, data['ema200'], label="EMA200")
 
-plt.title("Price + EMA200")
+longs = data[data['position'].diff() == 1]
+shorts = data[data['position'].diff() == -1]
+
+plt.scatter(longs.index, longs['Close'], marker="^", label="Long Entry")
+plt.scatter(shorts.index, shorts['Close'], marker="v", label="Short Entry")
+
+plt.title("Price + EMA200 + Signals")
 plt.legend()
 plt.grid()
 
 plt.show()
-
 
 # ==============================
 # RSI CHART
@@ -193,16 +221,16 @@ plt.show()
 
 plt.figure(figsize=(14,6))
 
-plt.plot(data.index, data['RSI'], label="RSI")
-plt.plot(data.index, data['rsi_low'], label="RSI Lower Threshold")
-plt.plot(data.index, data['rsi_high'], label="RSI Upper Threshold")
+plt.plot(data.index, data['RSI'])
 
-plt.title("RSI Adaptive Levels")
-plt.legend()
+plt.axhline(30)
+plt.axhline(70)
+
+plt.title("RSI Indicator")
+
 plt.grid()
 
 plt.show()
-
 
 # ==============================
 # EQUITY CURVE
@@ -210,13 +238,13 @@ plt.show()
 
 plt.figure(figsize=(14,6))
 
-plt.plot(data.index, data['equity'])
+plt.plot(data.index, equity_curve)
 
 plt.title("Equity Curve")
+
 plt.grid()
 
 plt.show()
-
 
 # ==============================
 # DRAWDOWN
@@ -227,17 +255,16 @@ plt.figure(figsize=(14,6))
 plt.plot(data.index, drawdown)
 
 plt.title("Drawdown")
+
 plt.grid()
 
 plt.show()
 
 # ==============================
-# BELL CURVE
+# RETURN DISTRIBUTION
 # ==============================
 
 plt.figure(figsize=(10,5))
-
-returns = data['strategy_returns']
 
 mu = returns.mean()
 sigma = returns.std()
@@ -250,5 +277,7 @@ plt.hist(returns, bins=60, density=True)
 plt.plot(x,y)
 
 plt.title("Return Distribution")
+
 plt.grid()
+
 plt.show()
